@@ -1,4 +1,4 @@
-import { MINUTE, PEOPLE } from './domain.js?v=3';
+import { MINUTE, PEOPLE } from './domain.js?v=5';
 
 const SAMPLE_SCORES = { lin: 718, zhou: 745, man: 692, yu: 731, wen: 683, xu: 709 };
 const DEMO_DOMAIN = 'students.donghu.example';

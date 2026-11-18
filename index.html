@@ -6,8 +6,10 @@
   <meta name="theme-color" content="#f7f8fc">
   <meta name="description" content="搭把手是一个校园跑腿互助演示，支持发布代取、代买和座位互助任务，体验同学之间的交接和信用积累。">
   <title>搭把手 · 校园跑腿互助</title>
-  <link rel="stylesheet" href="./styles.css?v=4">
-  <script type="module" src="./app.js?v=4"></script>
+  <link rel="stylesheet" href="./styles.css?v=5">
+  <link rel="stylesheet" href="./printing.css?v=5">
+  <link rel="stylesheet" href="./market.css?v=5">
+  <script type="module" src="./app.js?v=5"></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">跳至内容</a>
@@ -20,6 +22,8 @@
       <nav class="sidebar-nav" aria-label="主导航">
         <a class="nav-link" data-page="tasks" href="#tasks"><span data-icon="grid"></span>任务广场</a>
         <a class="nav-link" data-page="mine" href="#mine"><span data-icon="clipboard"></span>我的任务</a>
+        <a class="nav-link" data-page="printing" href="#printing"><span data-icon="printer"></span>在线打印</a>
+        <a class="nav-link" data-page="market" href="#market"><span data-icon="bag"></span>闲置交易</a>
         <a class="nav-link" data-page="credit" href="#credit"><span data-icon="shield"></span>身份与信用</a>
       </nav>
       <div class="sidebar-bottom">
@@ -102,7 +106,7 @@
           <div class="my-stats" id="my-stats"></div>
           <div class="mine-controls">
             <div class="filter-list" id="mine-filters" role="group" aria-label="我的任务视角"></div>
-            <label class="sort-field"><span class="visually-hidden">按任务状态筛选</span><select id="mine-status"><option value="all">全部状态</option><option value="open">待接单</option><option value="active">进行中</option><option value="review">待确认</option><option value="completed">已完成</option><option value="closed">已关闭</option></select><span data-icon="chevron"></span></label>
+            <label class="sort-field"><span class="visually-hidden">按任务状态筛选</span><select id="mine-status"><option value="all">全部状态</option><option value="open">待接单</option><option value="active">进行中</option><option value="review">待确认</option><option value="completed">已完成</option><option value="no_show">已爽约</option><option value="closed">已关闭</option></select><span data-icon="chevron"></span></label>
           </div>
           <div class="task-grid mine-grid" id="mine-tasks"></div>
         </section>
@@ -112,13 +116,22 @@
           <section id="identity-content" class="identity-content" aria-labelledby="identity-title"></section>
           <div id="credit-content" class="credit-layout"></div>
         </section>
+        <section id="page-printing" class="page" hidden aria-labelledby="printing-title">
+          <div class="page-title-row"><div><h1 id="printing-title">在线打印</h1><p>提交要打印的内容，打印就绪后自取或请同学代取。</p></div></div>
+          <div id="printing-content"></div>
+        </section>
+        <section id="page-market" class="page" hidden aria-labelledby="market-title">
+          <div class="page-title-row"><div><h1 id="market-title">闲置交易</h1><p>和同校同学预约转让，约好地点当面交接。</p></div></div>
+          <div id="market-content"></div>
+        </section>
       </main>
     </div>
     <nav class="mobile-nav" aria-label="移动端主导航">
       <a class="nav-link" data-page="tasks" href="#tasks"><span data-icon="grid"></span>任务广场</a>
       <a class="nav-link" data-page="mine" href="#mine"><span data-icon="clipboard"></span>我的任务</a>
+      <a class="nav-link" data-page="printing" href="#printing"><span data-icon="printer"></span>在线打印</a>
+      <a class="nav-link" data-page="market" href="#market"><span data-icon="bag"></span>闲置交易</a>
       <a class="nav-link" data-page="credit" href="#credit"><span data-icon="shield"></span>身份与信用</a>
-      <button type="button" class="nav-link" data-action="guide"><span data-icon="help"></span>互助指南</button>
     </nav>
   </div>
 

@@ -1,18 +1,21 @@
 import {
-  CATEGORIES, CREDIT_PER_TASK, MINUTE, PEOPLE, STATUS,
+  CATEGORIES, CREDIT_PER_NO_SHOW, CREDIT_PER_TASK, MINUTE, PEOPLE, STATUS,
   clockLabel, createTask, creditFor, deadlineLabel, localInputValue, seedTasks,
   taskStatus, transition,
-} from './domain.js?v=3';
-import { icon } from './icons.js?v=2';
+} from './domain.js?v=5';
+import { icon } from './icons.js?v=5';
 import {
   bindingDetails, demoMailbox, normalizeBindings, requestDemoCode, studentVerified, updateBinding, verifyDemoCode,
-} from './identity.js?v=3';
-import { CAMPUS_STOPS, EXAMPLE_ROUTE, MAX_DETOUR_METERS, selectRoute, taskDetour } from './routes.js?v=4';
+} from './identity.js?v=5';
+import { CAMPUS_STOPS, EXAMPLE_ROUTE, MAX_DETOUR_METERS, seedRouteTasks, selectRoute, taskDetour } from './routes.js?v=5';
+import { createPrinting } from './printing.js?v=5';
+import { createMarket } from './market.js?v=5';
 
 const TASKS_KEY = 'dabashou.tasks.v1';
 const BINDINGS_KEY = 'dabashou.bindings.v1';
 const PERSON_KEY = 'dabashou.person.v1';
-const PAGES = ['tasks', 'mine', 'credit'];
+const PAGES = { tasks: '任务广场', mine: '我的任务', printing: '在线打印', market: '闲置交易', credit: '身份与信用' };
+const DISPLAY_CATEGORIES = { ...CATEGORIES, print: { label: '代取打印', icon: 'printer' } };
 const BINDING_METHODS = {
   student: { label: '学生邮箱', glyph: 'mail', purpose: '通过学校邮箱验证码确认学生身份。', action: '绑定学生邮箱', state: '已验证' },
   sesame: { label: '芝麻信用', glyph: 'badge', purpose: '首次授权时按样例芝麻分设定初始信用。', action: '绑定芝麻信用', state: '已授权' },
@@ -27,14 +30,15 @@ const toast = $('#toast');
 const currency = new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'CNY', currencyDisplay: 'narrowSymbol' });
 
 const ui = { page: 'tasks', category: 'all', query: '', sort: 'latest', route: null, myRole: 'taken', myStatus: 'all' };
-let tasks = seedTasks();
+const routeSeeds = seedRouteTasks();
+let tasks = [...seedTasks(), ...routeSeeds];
 const routeExamples = tasks.filter(task => task.status === 'open');
+const memoryWrites = new Map();
 let bindings = {};
 let person = 'lin';
 let modal;
 let opener;
 let saving = false;
-let storageAvailable = true;
 let toastTimer;
 
 function escapeHtml(value) {
@@ -44,16 +48,13 @@ function escapeHtml(value) {
 }
 
 function restoreTasks() {
-  if (!storageAvailable) return tasks;
-  try {
-    const stored = JSON.parse(localStorage.getItem(TASKS_KEY));
-    if (Array.isArray(stored) && stored.every(task => task && Object.hasOwn(CATEGORIES, task.category) &&
-      Object.hasOwn(PEOPLE, task.author) && (!task.assignee || Object.hasOwn(PEOPLE, task.assignee)) &&
-      Object.hasOwn(STATUS, task.status) && Number.isFinite(task.dueAt))) return stored;
-  } catch {
-    return tasks;
-  }
-  return tasks;
+  const stored = readStorage(TASKS_KEY, tasks);
+  if (!Array.isArray(stored) || !stored.every(task => task && Object.hasOwn(CATEGORIES, task.category) &&
+    Object.hasOwn(PEOPLE, task.author) && (!task.assignee || Object.hasOwn(PEOPLE, task.assignee)) &&
+    Object.hasOwn(STATUS, task.status) && Number.isFinite(task.dueAt))) return tasks;
+  const ids = new Set(stored.map(task => task.id));
+  const missing = routeSeeds.filter(task => !ids.has(task.id));
+  return missing.length ? [...stored, ...missing] : stored;
 }
 
 function setTasks(updated) {
@@ -62,23 +63,35 @@ function setTasks(updated) {
 }
 
 function restoreBindings() {
-  if (!storageAvailable) return bindings;
+  return normalizeBindings(readStorage(BINDINGS_KEY, bindings));
+}
+
+function readStorage(key, fallback) {
+  if (memoryWrites.has(key)) return memoryWrites.get(key);
   try {
-    return normalizeBindings(JSON.parse(localStorage.getItem(BINDINGS_KEY)));
+    return JSON.parse(localStorage.getItem(key)) ?? fallback;
   } catch {
-    return bindings;
+    return fallback;
   }
 }
 
 function persist(key, value) {
-  if (!storageAvailable) return false;
   try {
     localStorage.setItem(key, JSON.stringify(value));
+    memoryWrites.delete(key);
     return true;
   } catch {
-    storageAvailable = false;
+    memoryWrites.set(key, value);
     return false;
   }
+}
+
+function runTransaction(operation) {
+  return navigator.locks ? navigator.locks.request(TASKS_KEY, operation) : Promise.resolve().then(operation);
+}
+
+function newId() {
+  return globalThis.crypto.randomUUID?.() ?? Array.from(crypto.getRandomValues(new Uint32Array(4))).join('-');
 }
 
 function readPerson() {
@@ -97,8 +110,12 @@ function avatar(id) {
 }
 
 function categoryMark(type) {
-  const { label, icon: glyph } = CATEGORIES[type];
+  const { label, icon: glyph } = DISPLAY_CATEGORIES[type];
   return `<span class="category-mark tone-${type}"><span class="category-icon">${icon(glyph)}</span><span>${label}</span></span>`;
+}
+
+function displayCategory(task) {
+  return task.printOrderId ? 'print' : task.category;
 }
 
 function fee(amount) {
@@ -133,7 +150,7 @@ function renderCard(task, surface, extra = null) {
   const peerName = isAuthor && !task.assignee ? '我发布的' : PEOPLE[counterpart].name;
   return `
     <article class="task-card">
-      <div class="task-card-top">${categoryMark(task.category)}${fee(task.reward)}</div>
+      <div class="task-card-top">${categoryMark(displayCategory(task))}${fee(task.reward)}</div>
       <h3>${escapeHtml(task.title)}</h3>
       <div class="task-meta">
         <div class="meta-row">${icon('pin')}<span class="route-text">${taskPath(task)}</span>${detourTag(extra)}</div>
@@ -174,12 +191,13 @@ function renderRouteExamples(rows) {
 function renderBoard() {
   const open = tasks.filter(task => taskStatus(task) === 'open');
   const pending = routeCandidates(open, ui.route);
-  const examples = ui.route?.showExamples && pending.length === 0;
+  const examples = ui.route !== null && pending.length === 0;
   const candidates = examples ? routeCandidates(routeExamples, ui.route) : pending;
   const query = ui.query.trim().toLocaleLowerCase('zh-CN');
   const visible = candidates.filter(({ task }) => {
-    const categoryMatch = ui.category === 'all' || task.category === ui.category;
-    const publicText = [task.title, task.origin, task.destination, task.item, task.notes, CATEGORIES[task.category].label].join(' ');
+    const category = displayCategory(task);
+    const categoryMatch = ui.category === 'all' || category === ui.category;
+    const publicText = [task.title, task.origin, task.destination, task.item, task.notes, DISPLAY_CATEGORIES[category].label].join(' ');
     return categoryMatch && publicText.toLocaleLowerCase('zh-CN').includes(query);
   });
   const sorts = {
@@ -195,7 +213,7 @@ function renderBoard() {
   $('#board-count').textContent = count;
   const filters = $('#category-filters');
   if (!filters.childElementCount) {
-    filters.innerHTML = [['all', '全部任务'], ...Object.entries(CATEGORIES).map(([key, entry]) => [key, entry.label])]
+    filters.innerHTML = [['all', '全部任务'], ...Object.entries(DISPLAY_CATEGORIES).map(([key, entry]) => [key, entry.label])]
       .map(([key, label]) => chip(key, label, key === ui.category, 'filter')).join('');
   }
   for (const button of filters.querySelectorAll('button')) {
@@ -231,8 +249,8 @@ function renderRouteState() {
   }
 }
 
-function applyRoute(from, to, showExamples = false) {
-  ui.route = { ...selectRoute(from, to), showExamples };
+function applyRoute(from, to) {
+  ui.route = selectRoute(from, to);
   ui.sort = 'route';
   routeForm.elements.from.value = from;
   routeForm.elements.to.value = to;
@@ -273,17 +291,21 @@ function campusCredit(id) {
   return creditFor(tasks, id, bindings[id]?.initialCredit?.score);
 }
 
+function signedPoints(value) {
+  return `${value < 0 ? '−' : '+'}${Math.abs(value)}`;
+}
+
 function renderCredit() {
-  const { total, earned, entries } = campusCredit(person);
+  const { total, earned, lost, entries, ledger } = campusCredit(person);
   const initial = bindings[person]?.initialCredit;
   const verified = studentVerified(bindings[person]);
   const creditNumber = total === null
     ? '<div class="credit-number credit-unset"><strong>待设定</strong></div>'
     : `<div class="credit-number"><strong>${total}</strong><span>分</span></div>`;
-  const creditCaption = `<p class="credit-caption"><span class="credit-dot"></span>已完成 ${entries.length} 单 · 任务积分 +${earned} 分</p>`;
+  const creditCaption = `<p class="credit-caption"><span class="credit-dot"></span>已完成 ${entries.length} 单 · 任务积分 ${signedPoints(earned - lost)} 分</p>`;
   const creditRule = initial
-    ? `初始信用 ${initial.score} 分，每单确认后加 ${CREDIT_PER_TASK} 分。`
-    : `首次绑定芝麻信用时设定初始分。每单确认后加 ${CREDIT_PER_TASK} 分。`;
+    ? `初始信用 ${initial.score} 分。确认完成 +${CREDIT_PER_TASK} 分，爽约 −${CREDIT_PER_NO_SHOW} 分。`
+    : `首次绑定芝麻信用时设定初始分。确认完成 +${CREDIT_PER_TASK} 分，爽约 −${CREDIT_PER_NO_SHOW} 分。`;
   $('#identity-content').innerHTML = `
     <div class="identity-section-head"><div><h2 id="identity-title">${PEOPLE[person].name}的绑定记录</h2><p>验证学生邮箱后即可发布或接单。</p></div>
       <span class="binding-state ${verified ? 'is-bound' : ''}">${verified ? '学生身份已验证' : '学生身份待验证'}</span></div>
@@ -293,11 +315,11 @@ function renderCredit() {
     <div class="credit-heading"><span class="credit-emblem">${icon('shield')}</span><h2 id="credit-preview-title">我的校内信用</h2></div>
     ${creditNumber}${creditCaption}
     <a class="text-link" href="#credit">${initial ? '查看身份与信用' : '设定初始信用分'}${icon('arrow')}</a>`;
-  const records = entries.map(task => `
-    <li class="record">
-      <div class="record-icon">${icon('check')}</div>
-      <div class="record-copy"><strong>${escapeHtml(task.title)}</strong><small>${clockLabel(task.completedAt)} · 发布者确认</small></div>
-      <strong class="record-amount">+${CREDIT_PER_TASK} 分</strong>
+  const records = ledger.map(({ task, at, delta, reason }) => `
+    <li class="record ${delta < 0 ? 'record-penalty' : ''}">
+      <div class="record-icon">${icon(delta < 0 ? 'clock' : 'check')}</div>
+      <div class="record-copy"><strong>${escapeHtml(task.title)}</strong><small>${clockLabel(at)} · ${reason}</small></div>
+      <strong class="record-amount">${signedPoints(delta)} 分</strong>
     </li>`).join('');
   $('#credit-content').innerHTML = `
     <section class="panel credit-summary">
@@ -354,7 +376,8 @@ function renderAccount() {
   accountPanel.innerHTML = `<div class="account-panel-label">切换演示身份</div>${Object.entries(PEOPLE).map(([id, profile]) => `
     <button type="button" class="account-option" data-action="person" data-value="${id}" aria-pressed="${id === person}">
       ${avatar(id)}<span>${profile.name}<small>${profile.bio}</small></span>${id === person ? icon('check') : ''}
-    </button>`).join('')}`;
+    </button>`).join('')}
+    <button class="account-guide" type="button" data-action="guide">${icon('help')}互助指南</button>`;
 }
 
 function toggleAccount(open) {
@@ -367,19 +390,26 @@ function renderData() {
   renderBoard();
   renderMine();
   renderCredit();
+  refreshVisibleService();
+}
+
+function refreshVisibleService() {
+  if (ui.page === 'printing') printingPage.refresh();
+  if (ui.page === 'market') marketPage.refresh();
 }
 
 function renderPage(scroll = false) {
   const requested = location.hash.slice(1);
-  ui.page = PAGES.includes(requested) ? requested : 'tasks';
-  for (const page of PAGES) $(`#page-${page}`).hidden = page !== ui.page;
+  ui.page = Object.hasOwn(PAGES, requested) ? requested : 'tasks';
+  for (const page of Object.keys(PAGES)) $(`#page-${page}`).hidden = page !== ui.page;
   for (const link of document.querySelectorAll('[data-page]')) {
     if (link.dataset.page === ui.page) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   }
-  const titles = { tasks: '任务广场', mine: '我的任务', credit: '身份与信用' };
-  document.title = `搭把手 · ${titles[ui.page]}`;
-  if (scroll) window.scrollTo(0, 0);
+  document.title = `搭把手 · ${PAGES[ui.page]}`;
+  refreshVisibleService();
+  if (scroll && requested === 'route-finder') $('#route-finder').scrollIntoView();
+  else if (scroll) window.scrollTo(0, 0);
 }
 
 function showToast(message) {
@@ -515,7 +545,8 @@ function taskFacts(task) {
   const { category } = task;
   const facts = [[CATEGORIES[category].origin, task.origin]];
   if (task.destination) facts.push(['交接地点', task.destination]);
-  if (category === 'pickup') facts.push(['包裹', `${task.quantity} 件 · ${task.size}`]);
+  if (category === 'pickup') facts.push(task.printOrderId
+    ? ['打印份数', `${task.quantity} 份`] : ['包裹', `${task.quantity} 件 · ${task.size}`]);
   if (category === 'buy') {
     facts.push(['物品和规格', `${task.item} × ${task.quantity}`], ['商品预算', currency.format(task.budget)]);
   }
@@ -560,7 +591,7 @@ function renderDetail(task) {
   const participant = task.author === person || task.assignee === person;
   if ((modal.stage === 'delivery' || modal.stage === 'withdraw') && (status !== 'active' || person !== task.assignee)) modal.stage = '';
   if (modal.stage === 'cancel' && (status !== 'open' || person !== task.author)) modal.stage = '';
-  const header = `<div class="detail-badges">${categoryMark(task.category)}${statusTag(status)}</div>`;
+  const header = `<div class="detail-badges">${categoryMark(displayCategory(task))}${statusTag(status)}</div>`;
   let privateCode = '';
   if (task.category === 'pickup' && task.code) {
     privateCode = `<div class="info-box">${icon('lock')}<span>${participant ? `演示取件码 <strong>${escapeHtml(task.code)}</strong>` : '演示取件码在接单后显示。'}</span></div>`;
@@ -571,7 +602,7 @@ function renderDetail(task) {
     deliveryForm = `<form id="delivery-form">${field('交付说明', `<textarea name="delivery" required maxlength="240" rows="3" placeholder="${placeholder}"></textarea>`, '发布者确认后计入信用。')}</form>`;
   }
   const confirmation = modal.stage === 'cancel' ? '取消后，任务将从广场下架。'
-    : modal.stage === 'withdraw' ? '退出后，截止时间未到的任务会回到广场，其他同学可以接单。' : '';
+    : modal.stage === 'withdraw' ? `退出接单会记一次爽约，扣 ${CREDIT_PER_NO_SHOW} 分。任务会重新开放给其他同学。` : '';
   dialog.innerHTML = `${dialogHeader(task.title, header)}
     <div class="dialog-scroll detail-content">
       ${modal.notice ? `<div class="info-box success-box">${icon('check')}<span>${escapeHtml(modal.notice)}</span></div>` : ''}
@@ -580,6 +611,7 @@ function renderDetail(task) {
       ${task.notes ? `<div class="detail-note"><h3>任务说明</h3><p>${escapeHtml(task.notes)}</p></div>` : ''}
       ${task.category === 'seat' && task.mode === 'lookup' ? `<div class="info-box">${icon('info')}<span>空位以现场为准。图书馆预约请按本校规则由本人完成。</span></div>` : ''}
       ${privateCode}
+      ${participant && status === 'no_show' ? `<div class="info-box penalty-box">${icon('clock')}<span>截止前未提交交付，本次爽约扣接单同学 ${CREDIT_PER_NO_SHOW} 分。</span></div>` : ''}
       ${participant && status !== 'cancelled' && status !== 'expired' ? timeline(task) : ''}
       ${participant && task.delivery ? `<div class="detail-note"><h3>交付说明</h3><p>${escapeHtml(task.delivery)}</p></div>` : ''}
       ${deliveryForm}
@@ -594,6 +626,7 @@ function renderGuide() {
     <div class="dialog-scroll guide-content">
       <section><h3>发布和接单</h3><p>在「身份与信用」验证演示学生邮箱。发布时写清地点、截止时间和交接要求，接单者做完后提交交付说明。</p></section>
       <section><h3>初始信用分</h3><p>首次绑定芝麻信用时，系统用样例芝麻分设定初始分。已经确认的任务积分会计入校内信用。</p></section>
+      <section><h3>爽约扣分</h3><p>接单后退出，或超过截止时间仍未提交交付，记一次爽约并扣 ${CREDIT_PER_NO_SHOW} 分。结果可在校内信用明细查看。</p></section>
       <section><h3>体验双方确认</h3><p>切换右上角的演示身份。例如用小林接阿周的任务，提交交付后切换成阿周，在「我的任务 → 我发布的」确认完成。小林会获得 ${CREDIT_PER_TASK} 信用分。</p></section>
       <section><h3>座位互助</h3><p>图书馆可以请同学帮看空位，并按校规本人预约。校园活动可在主办方允许时请同学短时留座。</p></section>
       <section><h3>数据与金额</h3><p>校区、同学和示例任务均为演示数据。任务保存在当前浏览器。感谢费和商品预算用于展示，无在线支付或报销。</p></section>
@@ -680,7 +713,7 @@ async function mutate(commit, onSuccess) {
   saving = true;
   dialog.setAttribute('aria-busy', 'true');
   try {
-    const persisted = navigator.locks ? await navigator.locks.request(TASKS_KEY, commit) : commit();
+    const persisted = await runTransaction(commit);
     renderData();
     onSuccess(persisted ? '' : '当前浏览器无法保存本次操作。');
   } catch (error) {
@@ -702,6 +735,26 @@ function mutateTasks(update, onSuccess) {
 function requireVerifiedIdentity() {
   bindings = restoreBindings();
   if (!studentVerified(bindings[person])) throw new Error('请先验证学生邮箱。');
+}
+
+function publishPrintPickup(order, { destination, reward, deadline }) {
+  requireVerifiedIdentity();
+  if (order.owner !== person || order.status !== 'ready') throw new Error('这份订单需要先打印完成。');
+  const current = restoreTasks();
+  if (current.some(task => task.printOrderId === order.id && ['open', 'active', 'review', 'completed'].includes(taskStatus(task)))) {
+    throw new Error('这份订单已有代取进度，请在订单页查看。');
+  }
+  const taskId = newId();
+  const pickup = createTask({
+    category: 'pickup', title: `代取 ${order.copies} 份打印件`, origin: order.shop,
+    destination, deadline, reward, quantity: order.copies, size: '小件',
+    code: `DEMO-P${order.id.replace(/[^a-zA-Z0-9]/g, '').slice(-6).toUpperCase()}`,
+    notes: '打印已就绪。请在打印点领取封装好的打印件，按约定地点交接。',
+  }, person, taskId);
+  const persisted = setTasks([{ ...pickup, printOrderId: order.id }, ...current]);
+  renderBoard();
+  renderMine();
+  return { taskId, persisted };
 }
 
 function openBinding(stage, target = modal?.target) {
@@ -761,7 +814,7 @@ function updateTask(action, delivery = '') {
   const notices = {
     accept: '接单成功，可从「我的任务」跟进。', submit: '交付已提交，等待发布者确认。',
     complete: `已确认完成，${CREDIT_PER_TASK} 分已计入接单同学的信用记录。`,
-    cancel: '任务已取消。', withdraw: '已退出接单。',
+    cancel: '任务已取消。', withdraw: `已退出接单，本次爽约扣 ${CREDIT_PER_NO_SHOW} 分。`,
   };
   return mutateTasks(current => {
     if (action === 'accept') requireVerifiedIdentity();
@@ -792,8 +845,22 @@ function selectPerson(id) {
   showToast(`已切换为${PEOPLE[id].name}`);
 }
 
+await runTransaction(() => setTasks(restoreTasks()));
+bindings = restoreBindings();
+person = readPerson();
+const services = {
+  getPerson: () => person, people: PEOPLE, isStudentVerified: () => studentVerified(bindings[person]),
+  requireStudent: requireVerifiedIdentity, readStorage, writeStorage: persist, runTransaction, notify: showToast,
+  escapeHtml, icon, clockLabel, localInputValue, getTasks: restoreTasks, taskStatus, publishPickup: publishPrintPickup, newId,
+};
+const printingPage = createPrinting({ ...services, root: $('#printing-content') });
+const marketPage = createMarket({ ...services, root: $('#market-content') });
+
 const actions = {
-  guide: () => showDialog({ type: 'guide' }),
+  guide: () => {
+    if (!accountPanel.hidden) { toggleAccount(false); accountButton.focus(); }
+    showDialog({ type: 'guide' });
+  },
   publish: startPublish,
   detail: button => showDialog({ type: 'detail', id: button.dataset.id }),
   close: () => dialog.close(),
@@ -801,7 +868,7 @@ const actions = {
   clear: () => { resetTaskSearch(); renderBoard(); search.focus(); },
   'example-route': () => {
     resetTaskSearch();
-    applyRoute(EXAMPLE_ROUTE.from, EXAMPLE_ROUTE.to, true);
+    applyRoute(EXAMPLE_ROUTE.from, EXAMPLE_ROUTE.to);
   },
   'clear-route': () => {
     resetRoute();
@@ -872,7 +939,7 @@ document.addEventListener('submit', event => {
     updateTask('submit', values.delivery);
     return;
   }
-  const id = globalThis.crypto.randomUUID?.() ?? Array.from(crypto.getRandomValues(new Uint32Array(4))).join('-');
+  const id = newId();
   mutateTasks(current => {
     requireVerifiedIdentity();
     return [createTask(values, person, id), ...current];
@@ -944,9 +1011,11 @@ window.addEventListener('storage', event => {
   }
 });
 window.setInterval(() => {
-  if (document.activeElement?.closest('.task-card')) return;
+  if (document.activeElement?.closest('.task-card, #identity-content, #credit-content, #credit-preview')) return;
   renderBoard();
   renderMine();
+  renderCredit();
+  if (ui.page === 'printing') printingPage.refresh();
 }, MINUTE);
 
 for (const element of document.querySelectorAll('[data-icon]')) element.innerHTML = icon(element.dataset.icon);
@@ -954,9 +1023,6 @@ for (const menu of routeForm.querySelectorAll('select')) {
   menu.append(...Object.entries(CAMPUS_STOPS).map(([id, label]) => new Option(label, id)));
 }
 $('#route-hint').textContent = `按演示校区步行路线筛选，最多绕行 ${MAX_DETOUR_METERS} 米。`;
-setTasks(restoreTasks());
-bindings = restoreBindings();
-person = readPerson();
 renderAccount();
 renderRouteState();
 renderData();

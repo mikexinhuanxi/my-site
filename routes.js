@@ -89,3 +89,52 @@ export function taskDetour(route, task) {
   // Requiring the delivery order to be at least as direct rules out backtracking jobs.
   return orderedDistance <= reversedDistance && extra <= MAX_DETOUR_METERS ? extra : null;
 }
+
+export function seedRouteTasks(now = Date.now()) {
+  function sample(stop, author, title, details) {
+    return {
+      id: `route-sample-${stop}`, status: 'open', author, title,
+      createdAt: now - 90 * 60_000, dueAt: Math.floor((now + 7 * 86_400_000) / 60_000) * 60_000,
+      ...details,
+    };
+  }
+
+  function pickup(stop, author, title, pickupPoint, meetingPoint, reward) {
+    const place = CAMPUS_STOPS[stop];
+    return sample(stop, author, title, {
+      category: 'pickup', reward, origin: place + pickupPoint, destination: place + meetingPoint,
+      quantity: 1, size: '小件', code: `DEMO-${stop.toUpperCase()}`, notes: '一件小包裹，取好后在约定地点碰面。',
+    });
+  }
+
+  function buy(stop, author, title, shop, meetingPoint, item, budget) {
+    const place = CAMPUS_STOPS[stop];
+    return sample(stop, author, title, {
+      category: 'buy', reward: 3, origin: place + shop, destination: place + meetingPoint,
+      item, budget, quantity: 1, notes: '请按规格购买，缺货时在交付说明里告知。',
+    });
+  }
+
+  function seat(stop, author, title, zone) {
+    return sample(stop, author, title, {
+      category: 'seat', reward: 2, origin: `${CAMPUS_STOPS[stop]} · ${zone}`,
+      mode: 'lookup', notes: '反馈看到空位的区域和时间。',
+    });
+  }
+
+  return [
+    pickup('north', 'zhou', '帮从北门自提柜取一封快件', '自提柜', '出口', 4),
+    buy('canteen', 'man', '二食堂窗口带一杯无糖豆浆', '早餐窗口', '门口', '无糖豆浆', 6),
+    pickup('wutong', 'wen', '取梧桐苑楼下自提点的文具包', '自提点', '门厅', 4),
+    pickup('songbai', 'yu', '从松柏苑服务台带一件小包裹', '服务台', '门口', 4),
+    seat('library', 'xu', '帮看图书馆二楼靠走廊的空位', '走廊阅览区'),
+    pickup('wenhua', 'man', '帮取文华楼服务台代收的资料包', '服务台', '南门', 4),
+    pickup('east', 'lin', '帮取东门自提柜的小包裹', '自提柜', '取件区外', 3),
+    seat('activity', 'zhou', '帮看活动中心等候区有没有空位', '等候区'),
+    buy('gym', 'yu', '在体育馆自动售卖机买瓶水', '自动售卖机', '入口处', '500 ml 矿泉水', 5),
+    buy('shop', 'xu', '学苑超市顺手买一卷透明胶', '', '门口', '宽 24 mm 透明胶', 8),
+    pickup('design', 'wen', '帮取设计楼收发处的布料样品', '收发处', '门口', 5),
+    pickup('south', 'man', '顺手取南门驿站的一件薄包裹', '靠窗货架', '出口', 4),
+    pickup('bamboo', 'zhou', '帮带竹苑自提点的一袋日用品', '自提点', '南侧门口', 4),
+  ];
+}

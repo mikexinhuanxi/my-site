@@ -101,6 +101,9 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .account-option:hover, .account-option[aria-pressed="true"] { background: #f3efff; }
 .account-option small { display: block; color: var(--muted); font-size: 11px; }
 .account-option svg { width: 16px; height: 16px; color: var(--purple); }
+.account-guide { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 5px; padding: 9px; border-top: 1px solid var(--line); color: var(--muted); background: transparent; text-align: left; font-size: 12px; font-weight: 690; }
+.account-guide:hover { color: var(--purple-dark); background: #f6f3ff; }
+.account-guide svg { width: 16px; height: 16px; }
 
 .main { max-width: 1440px; margin: 0 auto; padding: 25px var(--gutter) 48px; }
 .main:focus, #dialog-title:focus { outline: none; }
@@ -185,6 +188,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .tone-pickup { --category-color: #ede7ff; --category-ink: #5a41c4; }
 .tone-buy { --category-color: #e4f6ee; --category-ink: #237354; }
 .tone-seat { --category-color: #fff1dc; --category-ink: #8b5715; }
+.tone-print { --category-color: #e8f0fc; --category-ink: #315990; }
 .category-icon { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--category-color); }
 .category-icon svg { width: 19px; height: 19px; }
 .task-fee { display: grid; align-content: center; text-align: right; flex: 0 0 auto; color: var(--purple-dark); font-variant-numeric: tabular-nums; }
@@ -213,6 +217,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .status-review { --status-color: #fff2dd; --status-ink: #864d0e; }
 .status-completed { --status-color: #e7f6ef; --status-ink: #247052; }
 .status-cancelled, .status-expired { --status-color: #eff0f4; --status-ink: #626778; }
+.status-no_show { --status-color: #ffe9ef; --status-ink: #9c2947; }
 
 .board-aside { min-width: 0; display: grid; gap: 15px; }
 .credit-preview, .credit-summary {
@@ -271,6 +276,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .record-amount { flex: none; color: var(--purple-dark); font-size: 13px; }
 .record-icon { color: #247052; background: #e7f6ef; }
 .record:last-child .record-icon { color: var(--purple-dark); background: #eee8ff; }
+.record-penalty .record-icon, .penalty-box { color: #9c2947; background: #fff0f4; }
+.record-penalty .record-amount { color: #9c2947; }
 .empty-state { grid-column: 1 / -1; min-height: 217px; display: grid; place-items: center; align-content: center; gap: 7px; padding: 20px; border: 1px dashed #ddd8ee; border-radius: 16px; color: var(--muted); background: #fcfbff; text-align: center; }
 .empty-state h3 { color: var(--ink); font-size: 17px; }
 .empty-state p { font-size: 13px; }
@@ -414,7 +421,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   .topbar-inner { height: 58px; }
   .topbar-start { gap: 9px; }
   .main { padding-top: 16px; padding-bottom: calc(83px + env(safe-area-inset-bottom)); }
-  .mobile-nav { position: fixed; z-index: 2; inset: auto 0 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; border-top: 1px solid var(--line); padding: 5px 7px calc(5px + env(safe-area-inset-bottom)); background: #fff; }
+  .mobile-nav { position: fixed; z-index: 2; inset: auto 0 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; border-top: 1px solid var(--line); padding: 5px 7px calc(5px + env(safe-area-inset-bottom)); background: #fff; }
   .mobile-nav .nav-link { flex-direction: column; justify-content: center; gap: 3px; min-height: 49px; padding: 3px 0; border-radius: 9px; font-size: 11px; }
   .mobile-nav svg { width: 18px; height: 18px; }
   .toast { bottom: calc(70px + env(safe-area-inset-bottom)); right: 13px; }

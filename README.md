@@ -2,7 +2,7 @@
 
 [打开校园互助 Demo](https://mikexinhuanxi.github.io/my-site/)
 
-“搭把手”是一个中文静态演示。学生可以发布代取、代买和座位互助任务，按类别、地点和截止时间找单，并跟进交接和信用记录。
+“搭把手”是一个中文静态演示。学生可以发布和接取校园互助任务，按行程筛选顺路任务，提交在线打印订单，以及预约转让闲置物品。
 
 ## 前置调研与设计
 
@@ -30,7 +30,19 @@
 
 在任务广场选起点、终点，点「查找顺路任务」。系统用演示校区的步行路网比较直达距离和依次经过任务取件点、交接点的距离，筛出方向合适且额外步行不超过 200 米的待接任务。座位互助只需经过一个地点。任务地点可以使用校区地点及其常用写法，例如「松柏苑 6 栋一楼」。
 
-点「试用示例路线」可体验北门菜鸟驿站到松柏苑 6 栋的 790 米路线。北门取快递和二食堂代买都在沿途，去图书馆二楼看空座约需多走 140 米。当前没有可接任务时，页面会用预置样例展示匹配结果。
+点「试用示例路线」可体验北门菜鸟驿站到松柏苑 6 栋的 790 米路线。北门取快递和二食堂代买都在沿途，去图书馆二楼看空座约需多走 140 米。13 个校区地点的 156 组不同起终点均有顺路样例。当前路线没有可接任务时，页面会用预置样例展示匹配结果。
+
+## 爽约扣分
+
+接单后确认退出，或截止时仍未提交交付，接单者每次扣 10 信用分。主动退出会重新开放未到期任务。校内信用明细保留任务名称、扣分原因和时间。已提交交付的任务可等待发布者确认。
+
+## 在线打印
+
+在「在线打印」填写文字或选择本地 PDF，设定打印点、页数、份数和版式，提交订单。点击「模拟打印完成」后可自取，也可通过「请同学代取」填写交接地点并发布任务。接单同学从任务广场提交交付，发布者确认后，订单显示「已取件」。打印内容、状态和估算费用均用于本地演示。
+
+## 闲置交易
+
+在「闲置交易」可查看样例商品，按类别筛选或发布闲置。切换为另一位演示身份，可预约购买并在当面交接后确认收货。双方可从「我的交易」跟进状态。交易金额用于演示。
 
 ## 运行与部署
 
@@ -42,5 +54,14 @@ GitHub Pages 继续从仓库的 `main` 分支根目录发布。入口是 `index.
 <summary>插画提示词</summary>
 
 Create a single horizontal 3:2 transparent PNG cutout for the right half of a polished Chinese university student errands dashboard hero. A crisp, tactile 3D miniature of an East Asian university student in a warm yellow jacket and white sneakers riding a mint-green step-through bicycle, open cheerful youthful face in three-quarter view, black hair, a violet backpack and a securely placed little brown cardboard parcel in the front basket. A few secondary elements form one balanced vignette: a lilac location pin gently hovering behind, a small rounded cream campus gate and one stylized green shrub in the back, all resting just above a very shallow curved lavender path. Genuine alpha around the entire vignette and open negative space between objects with no rectangular backdrop. Premium soft molded clay / matte vinyl editorial illustration, friendly adult proportions, three-quarter side view, naturally detailed bicycle with two whole wheels, vibrant electric iris, mint and butter yellow accents, soft formed shadows, fine surface quality, legible silhouettes at 430 px. The scene is centered, framed generously with every part visible and fits horizontally. No words, text, symbols on parcel, lettering, interfaces, badges, watermark, solid sky or scenery outside the vignette.
+
+</details>
+
+闲置商品样例图使用内置 ImageGen 生成。[折叠台灯](./assets/market-lamp.webp) · [高数教材](./assets/market-books.webp) · [折叠推车](./assets/market-cart.webp)
+
+<details>
+<summary>闲置商品图片提示词</summary>
+
+Create an original square 2 by 2 contact sheet for a Chinese student secondhand marketplace. Four equal square tiles, clean seamless edges at the exact midpoint splits, composed as totally independent realistic product photographs in diffuse natural light on neutral studio backdrops. Upper left: a compact white folding rechargeable desk lamp, softly used but clean, switch and hinge legible, pale lavender matte background. Upper right: a tidy stack of two used university calculus textbooks with blue and cream understated covers, mathematical line art only, no words or branding, warm cream backdrop. Lower left: a compact black folding shopping trolley cart with four small wheels, open crate with an extended handle, sage-green soft background. Lower right: plain warm grey backdrop only. Center each product in its own tile with generous margin on every side for independent square crops, objects never cross tile boundaries. Subtle real material textures and gentle shadows. No people, labels, graphic icons, emblems, watermarks, or UI.
 
 </details>

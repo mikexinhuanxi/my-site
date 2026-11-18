@@ -1,4 +1,5 @@
 export const CREDIT_PER_TASK = 10;
+export const CREDIT_PER_NO_SHOW = 10;
 export const TIME_ZONE = 'Asia/Shanghai';
 
 export const CATEGORIES = {
@@ -18,7 +19,7 @@ export const PEOPLE = {
 
 export const STATUS = {
   open: '待接单', active: '进行中', review: '待确认', completed: '已完成',
-  cancelled: '已取消', expired: '已过期',
+  cancelled: '已取消', expired: '已过期', no_show: '已爽约',
 };
 
 export const MINUTE = 60_000;
@@ -108,14 +109,29 @@ export function seedTasks(now = Date.now()) {
 }
 
 export function taskStatus(task, now = Date.now()) {
-  return task.status === 'open' && task.dueAt <= now ? 'expired' : task.status;
+  if (task.dueAt <= now) {
+    if (task.status === 'open') return 'expired';
+    if (task.status === 'active') return 'no_show';
+  }
+  return task.status;
 }
 
-export function creditFor(tasks, person, startingScore = null) {
+export function creditFor(tasks, person, startingScore = null, now = Date.now()) {
   const entries = tasks.filter(task => task.status === 'completed' && task.assignee === person)
     .sort((a, b) => b.completedAt - a.completedAt);
+  const ledger = entries.map(task => ({ task, at: task.completedAt, delta: CREDIT_PER_TASK, reason: '发布者确认' }));
+  for (const task of tasks) {
+    for (const record of task.withdrawals ?? []) {
+      if (record.person === person) ledger.push({ task, at: record.at, delta: -CREDIT_PER_NO_SHOW, reason: '退出接单 · 爽约' });
+    }
+    if (task.assignee === person && taskStatus(task, now) === 'no_show') {
+      ledger.push({ task, at: task.dueAt, delta: -CREDIT_PER_NO_SHOW, reason: '超时未交付 · 爽约' });
+    }
+  }
+  ledger.sort((a, b) => b.at - a.at);
   const earned = entries.length * CREDIT_PER_TASK;
-  return { entries, earned, total: startingScore === null ? null : startingScore + earned };
+  const lost = ledger.reduce((sum, entry) => sum + Math.max(0, -entry.delta), 0);
+  return { entries, earned, lost, ledger, total: startingScore === null ? null : startingScore + earned - lost };
 }
 
 function requiredText(value, label, maxLength) {
@@ -190,7 +206,10 @@ export function transition(task, action, person, delivery = '', now = Date.now()
   }
   if (action === 'withdraw' && status === 'active' && isRunner) {
     const { assignee, acceptedAt, ...availableTask } = task;
-    return { ...availableTask, status: 'open' };
+    return {
+      ...availableTask, status: 'open',
+      withdrawals: [...(task.withdrawals ?? []), { person: assignee, at: now }],
+    };
   }
   throw new Error('这项操作当前不可用，请查看最新任务状态。');
 }
