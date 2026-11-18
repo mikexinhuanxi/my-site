@@ -1,4 +1,3 @@
-export const BASE_CREDIT = 100;
 export const CREDIT_PER_TASK = 10;
 export const TIME_ZONE = 'Asia/Shanghai';
 
@@ -112,10 +111,11 @@ export function taskStatus(task, now = Date.now()) {
   return task.status === 'open' && task.dueAt <= now ? 'expired' : task.status;
 }
 
-export function creditFor(tasks, person) {
+export function creditFor(tasks, person, startingScore = null) {
   const entries = tasks.filter(task => task.status === 'completed' && task.assignee === person)
     .sort((a, b) => b.completedAt - a.completedAt);
-  return { entries, total: BASE_CREDIT + entries.length * CREDIT_PER_TASK };
+  const earned = entries.length * CREDIT_PER_TASK;
+  return { entries, earned, total: startingScore === null ? null : startingScore + earned };
 }
 
 function requiredText(value, label, maxLength) {

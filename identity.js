@@ -1,4 +1,4 @@
-import { MINUTE, PEOPLE } from './domain.js';
+import { MINUTE, PEOPLE } from './domain.js?v=3';
 
 const SAMPLE_SCORES = { lin: 718, zhou: 745, man: 692, yu: 731, wen: 683, xu: 709 };
 const DEMO_DOMAIN = 'students.donghu.example';
@@ -7,23 +7,48 @@ export function demoMailbox(person) {
   return `${person}@${DEMO_DOMAIN}`;
 }
 
+function validTime(value) {
+  return Number.isSafeInteger(value) && value > 0 && value <= 8.64e15;
+}
+
+function sampleStartingCredit(person, setAt) {
+  return { score: SAMPLE_SCORES[person], setAt };
+}
+
 export function normalizeBindings(stored) {
   const bindings = {};
   for (const id of Object.keys(PEOPLE)) {
     const record = stored?.[id];
     if (!record) continue;
-    bindings[id] = {};
+    const normalized = {};
     for (const method of ['student', 'sesame']) {
-      if (Number.isSafeInteger(record[method]) && record[method] > 0 && record[method] <= 8.64e15) {
-        bindings[id][method] = record[method];
-      }
+      if (validTime(record[method])) normalized[method] = record[method];
     }
+    const initial = record.initialCredit;
+    if (Number.isSafeInteger(initial?.score) && initial.score >= 0 && validTime(initial.setAt)) {
+      normalized.initialCredit = { score: initial.score, setAt: initial.setAt };
+    } else if (normalized.sesame) {
+      // Prior demo versions saved the authorization time without storing a starting score.
+      normalized.initialCredit = sampleStartingCredit(id, normalized.sesame);
+    }
+    bindings[id] = normalized;
   }
   return bindings;
 }
 
-export function identityReady(record) {
-  return Boolean(record?.student && record.sesame);
+export function studentVerified(record) {
+  return Boolean(record?.student);
+}
+
+export function updateBinding(record, person, method, linked, now = Date.now()) {
+  const updated = { ...record };
+  if (linked) {
+    updated[method] ??= now;
+    if (method === 'sesame') updated.initialCredit ??= sampleStartingCredit(person, updated.sesame);
+  } else {
+    delete updated[method];
+  }
+  return updated;
 }
 
 export function bindingDetails(method, person) {
