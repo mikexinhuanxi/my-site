@@ -1,147 +1,110 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>建设中</title>
-<meta name="description" content="站点正在建设中，敬请期待。">
-<style>
-  *, *::before, *::after { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
-                 "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
-    background: #f6f7f9;
-    color: #1d2129;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-    -webkit-font-smoothing: antialiased;
-  }
-  .glow {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    background:
-      radial-gradient(680px 380px at 50% -8%, rgba(45, 110, 245, .10), transparent 70%),
-      radial-gradient(520px 320px at 85% 108%, rgba(120, 90, 240, .08), transparent 70%);
-  }
-  .card {
-    position: relative;
-    width: 100%;
-    max-width: 560px;
-    background: #ffffff;
-    border: 1px solid #e8eaee;
-    border-radius: 18px;
-    padding: 52px 40px 44px;
-    text-align: center;
-    box-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 12px 32px -12px rgba(16, 24, 40, .10);
-    animation: rise .6s cubic-bezier(.22, .8, .3, 1) both;
-  }
-  @keyframes rise {
-    from { opacity: 0; transform: translateY(14px); }
-    to   { opacity: 1; transform: none; }
-  }
-  .dot {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 56px;
-    height: 56px;
-    margin-bottom: 26px;
-    border-radius: 16px;
-    background: #eef3fe;
-    color: #2d6ef5;
-  }
-  .dot svg { width: 26px; height: 26px; }
-  h1 {
-    margin: 0 0 12px;
-    font-size: 25px;
-    font-weight: 650;
-    letter-spacing: .3px;
-  }
-  p {
-    margin: 0 auto;
-    max-width: 380px;
-    font-size: 15px;
-    line-height: 1.75;
-    color: #5b6472;
-  }
-  .status {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 30px;
-    padding: 7px 14px;
-    border: 1px solid #e8eaee;
-    border-radius: 999px;
-    background: #fafbfc;
-    font-size: 13px;
-    color: #5b6472;
-  }
-  .pulse {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #16a34a;
-    box-shadow: 0 0 0 0 rgba(22, 163, 74, .55);
-    animation: pulse 2s infinite;
-  }
-  @keyframes pulse {
-    70%  { box-shadow: 0 0 0 8px rgba(22, 163, 74, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
-  }
-  footer {
-    margin-top: 34px;
-    padding-top: 22px;
-    border-top: 1px solid #f0f2f5;
-    font-size: 12.5px;
-    color: #98a1ae;
-  }
-  footer a {
-    color: #5b6472;
-    text-decoration: none;
-    border-bottom: 1px solid #dfe3e9;
-    padding-bottom: 1px;
-    transition: color .2s, border-color .2s;
-  }
-  footer a:hover { color: #2d6ef5; border-color: #2d6ef5; }
-  @media (max-width: 480px) {
-    .card { padding: 40px 24px 34px; border-radius: 16px; }
-    h1 { font-size: 22px; }
-    p { font-size: 14.5px; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .card { animation: none; }
-    .pulse { animation: none; }
-  }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="description" content="搭把手是一个校园跑腿互助演示，支持发布代取、代买和座位互助任务，体验同学之间的交接和信用积累。">
+  <title>搭把手 · 校园跑腿互助</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./app.js"></script>
 </head>
 <body>
-  <div class="glow"></div>
+  <a class="skip-link" href="#main-content">跳至内容</a>
+  <div class="shell">
+    <aside class="sidebar" aria-label="侧栏">
+      <a href="#tasks" class="brand" aria-label="搭把手首页">
+        <span class="brand-icon" data-icon="route"></span>
+        <span><strong>搭把手</strong><small>校园跑腿互助</small></span>
+      </a>
+      <nav class="sidebar-nav" aria-label="主导航">
+        <a class="nav-link" data-page="tasks" href="#tasks"><span data-icon="grid"></span>任务广场</a>
+        <a class="nav-link" data-page="mine" href="#mine"><span data-icon="clipboard"></span>我的任务</a>
+        <a class="nav-link" data-page="credit" href="#credit"><span data-icon="shield"></span>信用记录</a>
+      </nav>
+      <div class="sidebar-bottom">
+        <button type="button" class="nav-link" data-action="guide"><span data-icon="help"></span>互助指南</button>
+        <div class="demo-card"><span class="demo-dot"></span><div><strong>演示模式</strong><p>切换右上角身份，体验发布与接单。</p></div></div>
+      </div>
+    </aside>
 
-  <main class="card">
-    <div class="dot">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
-           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M12 3v18M3 12h18"/>
-        <circle cx="12" cy="12" r="9" opacity=".45"/>
-      </svg>
+    <div class="workspace">
+      <header class="topbar">
+        <div class="topbar-inner">
+          <div class="topbar-start">
+            <a href="#tasks" class="brand mobile-brand" aria-label="搭把手首页"><span class="brand-icon" data-icon="route"></span><strong>搭把手</strong></a>
+            <span class="campus"><span data-icon="pin"></span><span>东湖校区</span></span>
+          </div>
+          <div class="account">
+            <button type="button" class="account-button" id="account-button" aria-expanded="false" aria-controls="account-panel"></button>
+            <div class="account-panel" id="account-panel" hidden></div>
+          </div>
+        </div>
+      </header>
+
+      <main class="main" id="main-content" tabindex="-1">
+        <section id="page-tasks" class="page" aria-labelledby="hero-title">
+          <div class="hero">
+            <div class="hero-content">
+              <h1 id="hero-title">校园里的事，<br><span>顺路搭把手。</span></h1>
+              <p class="hero-description">代取快递、代买物品、座位互助，和同校同学互相帮个忙。</p>
+              <button type="button" class="button primary hero-action" data-action="publish"><span data-icon="plus"></span>发布任务</button>
+            </div>
+            <img class="hero-art" src="./assets/campus-ride.webp" width="840" height="560" alt="" fetchpriority="high">
+          </div>
+
+          <div class="board-layout">
+            <section class="board" aria-labelledby="board-title">
+              <div class="section-head">
+                <div><h2 id="board-title">任务广场</h2><p id="board-count" aria-live="polite"></p></div>
+                <label class="search-field"><span data-icon="search"></span><span class="visually-hidden">搜索任务或地点</span><input id="task-search" type="search" maxlength="80" placeholder="搜索任务或地点" autocomplete="off"></label>
+              </div>
+              <div class="board-controls">
+                <div class="filter-list" id="category-filters" role="group" aria-label="任务类别"></div>
+                <label class="sort-field"><span class="visually-hidden">任务排序</span><select id="task-sort"><option value="latest">最新发布</option><option value="soon">最早截止</option><option value="reward">感谢费最高</option></select><span data-icon="chevron"></span></label>
+              </div>
+              <div class="task-grid" id="board-tasks"></div>
+            </section>
+            <aside class="board-aside" aria-label="个人信用与流程">
+              <section class="panel credit-preview" id="credit-preview" aria-labelledby="credit-preview-title"></section>
+              <section class="panel steps-preview" aria-labelledby="steps-title">
+                <h2 id="steps-title">互助流程</h2>
+                <ol class="steps-list">
+                  <li><span class="step-icon" data-icon="hand"></span><div><strong>确认路线后接单</strong><small>先看地点、时间和要求</small></div></li>
+                  <li><span class="step-icon" data-icon="package"></span><div><strong>完成任务，提交交付</strong><small>留下交付地点或结果</small></div></li>
+                  <li><span class="step-icon" data-icon="badge"></span><div><strong>发布者确认完成</strong><small>接单同学获得 10 信用分</small></div></li>
+                </ol>
+              </section>
+            </aside>
+          </div>
+        </section>
+
+        <section id="page-mine" class="page" hidden aria-labelledby="mine-title">
+          <div class="page-title-row"><div><h1 id="mine-title">我的任务</h1><p>在这里跟进你接单和发布的任务。</p></div><button type="button" class="button primary" data-action="publish"><span data-icon="plus"></span>发布任务</button></div>
+          <div class="my-stats" id="my-stats"></div>
+          <div class="mine-controls">
+            <div class="filter-list" id="mine-filters" role="group" aria-label="我的任务视角"></div>
+            <label class="sort-field"><span class="visually-hidden">按任务状态筛选</span><select id="mine-status"><option value="all">全部状态</option><option value="open">待接单</option><option value="active">进行中</option><option value="review">待确认</option><option value="completed">已完成</option><option value="closed">已关闭</option></select><span data-icon="chevron"></span></label>
+          </div>
+          <div class="task-grid mine-grid" id="mine-tasks"></div>
+        </section>
+
+        <section id="page-credit" class="page" hidden aria-labelledby="credit-title">
+          <div class="page-title-row"><div><h1 id="credit-title">信用记录</h1><p>查看互助完成记录与信用分变化。</p></div></div>
+          <div id="credit-content" class="credit-layout"></div>
+        </section>
+      </main>
     </div>
+    <nav class="mobile-nav" aria-label="移动端主导航">
+      <a class="nav-link" data-page="tasks" href="#tasks"><span data-icon="grid"></span>任务广场</a>
+      <a class="nav-link" data-page="mine" href="#mine"><span data-icon="clipboard"></span>我的任务</a>
+      <a class="nav-link" data-page="credit" href="#credit"><span data-icon="shield"></span>信用记录</a>
+      <button type="button" class="nav-link" data-action="guide"><span data-icon="help"></span>互助指南</button>
+    </nav>
+  </div>
 
-    <h1>网站建设中</h1>
-    <p>这里正在搭建中，内容稍后上线。<br>页面已经部署完成，随时可以访问。</p>
-
-    <div class="status">
-      <span class="pulse" aria-hidden="true"></span>
-      <span>页面已上线 · 持续更新中</span>
-    </div>
-
-    <footer>
-      由 GitHub Pages 提供托管 ·
-      <a href="https://github.com/mikexinhuanxi">@mikexinhuanxi</a>
-    </footer>
-  </main>
+  <dialog class="dialog" id="dialog" aria-labelledby="dialog-title"></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <noscript><p class="noscript">请启用 JavaScript 后体验任务发布、交接和信用记录。</p></noscript>
 </body>
 </html>
