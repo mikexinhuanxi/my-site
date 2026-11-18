@@ -255,6 +255,40 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .empty-state .button { margin-top: 4px; }
 .empty-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 11px; color: #6a53c8; background: #eee8ff; }
 
+.identity-content { margin-bottom: 21px; }
+.identity-section-head { display: flex; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 11px; }
+.identity-section-head h2 { font-size: 17px; font-weight: 780; }
+.identity-section-head p { margin-top: 3px; color: var(--muted); font-size: 12px; }
+.binding-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
+.binding-card { display: flex; flex-direction: column; justify-content: space-between; gap: 13px; min-width: 0; padding: 14px; }
+.binding-top { display: grid; align-items: start; grid-template-columns: auto minmax(0, 1fr) auto; gap: 9px; }
+.binding-icon { display: inline-grid; flex: 0 0 auto; place-items: center; width: 37px; height: 37px; border-radius: 10px; background: #e7f4fc; color: #2f6289; }
+.binding-sesame .binding-icon { background: #eee7ff; color: var(--purple-dark); }
+.binding-card h3 { font-size: 14px; line-height: 1.4; }
+.binding-card p, .binding-receipt p { margin-top: 3px; color: var(--muted); font-size: 12px; }
+.binding-state { flex: 0 0 auto; padding: 3px 7px; border-radius: 7px; background: #f1eff6; color: #615671; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.binding-state.is-bound { background: #e5f6ec; color: #216548; }
+.binding-bottom { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; padding-top: 10px; border-top: 1px solid #eff0f6; }
+.binding-bottom .button { min-height: 34px; margin-left: auto; padding-inline: 9px; font-size: 12px; }
+.binding-value { min-width: 0; overflow-wrap: anywhere; color: #534573; font-size: 12px; }
+.binding-action { color: var(--purple-dark); background: #f0eaff; }
+.binding-action:hover { background: #e8dfff; }
+.identity-note { display: flex; align-items: start; gap: 6px; margin-top: 10px; color: var(--muted); font-size: 12px; }
+.identity-note svg, .identity-mark svg { width: 15px; height: 15px; }
+.identity-note svg { margin-top: 1px; color: var(--purple-dark); }
+.identity-mark { display: inline-flex; align-items: center; margin-left: 1px; color: #22775a; vertical-align: text-bottom; }
+.detail-person .identity-mark { margin-left: 3px; }
+.identity-dialog > p { color: #4d536b; }
+.identity-dialog .binding-card { box-shadow: none; }
+.binding-form { display: grid; gap: 10px; }
+.plain-button { justify-self: start; padding: 5px 0; color: var(--purple-dark); background: transparent; font-size: 12px; font-weight: 700; }
+.plain-button:hover { text-decoration: underline; text-underline-offset: 3px; }
+.binding-receipt, .demo-mail { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 11px; background: #faf9ff; }
+.binding-receipt strong { overflow-wrap: anywhere; }
+.demo-mail { justify-content: space-between; flex-wrap: wrap; border-color: #e9defd; background: #f6f1ff; }
+.demo-mail p { margin-top: 3px; color: var(--muted); font-size: 12px; }
+.challenge-code { color: var(--purple-dark); font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: .13em; }
+
 .dialog { width: min(620px, calc(100% - 32px)); max-height: min(88dvh, 850px); padding: 0; border: 1px solid #e8e3f1; border-radius: 20px; color: var(--ink); background: var(--paper); box-shadow: 0 25px 95px #2420384d; overflow: hidden; }
 .dialog[open] { display: flex; flex-direction: column; }
 .dialog::backdrop { background: #231e3f69; backdrop-filter: blur(2px); }
@@ -384,6 +418,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   .task-card h3 { margin-top: 9px; }
   .card-button { min-height: 38px; }
   .board-aside, .credit-layout { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .binding-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .binding-card { padding: 12px; }
   .steps-preview, .credit-preview { padding: 15px 14px; }
   .page-title-row { align-items: flex-start; }
   .page-title-row .button { font-size: 12px; padding-inline: 10px; }

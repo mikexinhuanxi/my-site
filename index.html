@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#f7f8fc">
   <meta name="description" content="搭把手是一个校园跑腿互助演示，支持发布代取、代买和座位互助任务，体验同学之间的交接和信用积累。">
   <title>搭把手 · 校园跑腿互助</title>
-  <link rel="stylesheet" href="./styles.css">
-  <script type="module" src="./app.js"></script>
+  <link rel="stylesheet" href="./styles.css?v=2">
+  <script type="module" src="./app.js?v=2"></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">跳至内容</a>
@@ -20,7 +20,7 @@
       <nav class="sidebar-nav" aria-label="主导航">
         <a class="nav-link" data-page="tasks" href="#tasks"><span data-icon="grid"></span>任务广场</a>
         <a class="nav-link" data-page="mine" href="#mine"><span data-icon="clipboard"></span>我的任务</a>
-        <a class="nav-link" data-page="credit" href="#credit"><span data-icon="shield"></span>信用记录</a>
+        <a class="nav-link" data-page="credit" href="#credit"><span data-icon="shield"></span>身份与信用</a>
       </nav>
       <div class="sidebar-bottom">
         <button type="button" class="nav-link" data-action="guide"><span data-icon="help"></span>互助指南</button>
@@ -90,7 +90,8 @@
         </section>
 
         <section id="page-credit" class="page" hidden aria-labelledby="credit-title">
-          <div class="page-title-row"><div><h1 id="credit-title">信用记录</h1><p>查看互助完成记录与信用分变化。</p></div></div>
+          <div class="page-title-row"><div><h1 id="credit-title">身份与信用</h1><p>验证学生邮箱、授权芝麻信用，查看校内互助记录。</p></div></div>
+          <section id="identity-content" class="identity-content" aria-labelledby="identity-title"></section>
           <div id="credit-content" class="credit-layout"></div>
         </section>
       </main>
@@ -98,7 +99,7 @@
     <nav class="mobile-nav" aria-label="移动端主导航">
       <a class="nav-link" data-page="tasks" href="#tasks"><span data-icon="grid"></span>任务广场</a>
       <a class="nav-link" data-page="mine" href="#mine"><span data-icon="clipboard"></span>我的任务</a>
-      <a class="nav-link" data-page="credit" href="#credit"><span data-icon="shield"></span>信用记录</a>
+      <a class="nav-link" data-page="credit" href="#credit"><span data-icon="shield"></span>身份与信用</a>
       <button type="button" class="nav-link" data-action="guide"><span data-icon="help"></span>互助指南</button>
     </nav>
   </div>

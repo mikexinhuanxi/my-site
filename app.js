@@ -3,11 +3,17 @@ import {
   clockLabel, createTask, creditFor, deadlineLabel, localInputValue, seedTasks,
   taskStatus, transition,
 } from './domain.js';
-import { icon } from './icons.js';
+import { icon } from './icons.js?v=2';
+import { bindingDetails, demoMailbox, identityReady, normalizeBindings, requestDemoCode, verifyDemoCode } from './identity.js';
 
 const TASKS_KEY = 'dabashou.tasks.v1';
+const BINDINGS_KEY = 'dabashou.bindings.v1';
 const PERSON_KEY = 'dabashou.person.v1';
 const PAGES = ['tasks', 'mine', 'credit'];
+const BINDING_METHODS = {
+  student: { label: '学生邮箱', glyph: 'mail', purpose: '通过学校邮箱验证码确认学生身份。', action: '绑定学生邮箱', state: '已验证' },
+  sesame: { label: '芝麻信用', glyph: 'badge', purpose: '授权后查看样例芝麻分。', action: '绑定芝麻信用', state: '已授权' },
+};
 const $ = (selector, root = document) => root.querySelector(selector);
 const dialog = $('#dialog');
 const accountButton = $('#account-button');
@@ -18,6 +24,7 @@ const currency = new Intl.NumberFormat('zh-CN', { style: 'currency', currency: '
 
 const ui = { page: 'tasks', category: 'all', query: '', sort: 'latest', myRole: 'taken', myStatus: 'all' };
 let tasks = seedTasks();
+let bindings = {};
 let person = 'lin';
 let modal;
 let opener;
@@ -46,9 +53,22 @@ function restoreTasks() {
 
 function setTasks(updated) {
   tasks = updated;
+  return persist(TASKS_KEY, updated);
+}
+
+function restoreBindings() {
+  if (!storageAvailable) return bindings;
+  try {
+    return normalizeBindings(JSON.parse(localStorage.getItem(BINDINGS_KEY)));
+  } catch {
+    return bindings;
+  }
+}
+
+function persist(key, value) {
   if (!storageAvailable) return false;
   try {
-    localStorage.setItem(TASKS_KEY, JSON.stringify(updated));
+    localStorage.setItem(key, JSON.stringify(value));
     return true;
   } catch {
     storageAvailable = false;
@@ -86,6 +106,11 @@ function statusTag(status) {
   return `<span class="tag status-${status}"><span></span>${STATUS[status]}</span>`;
 }
 
+function identityTag(id) {
+  if (!identityReady(bindings[id])) return '';
+  return `<span class="identity-mark" title="演示身份已验证">${icon('shield')}<span class="visually-hidden">演示身份已验证</span></span>`;
+}
+
 function renderCard(task, surface) {
   const status = taskStatus(task);
   const isAuthor = task.author === person;
@@ -105,7 +130,7 @@ function renderCard(task, surface) {
         </div>
       </div>
       <div class="task-card-bottom">
-        <span class="card-person">${avatar(counterpart)}<span>${peerName}</span></span>
+        <span class="card-person">${avatar(counterpart)}<span>${peerName}</span>${identityTag(counterpart)}</span>
         <button class="button card-button" type="button" data-action="detail" data-id="${escapeHtml(task.id)}" aria-label="查看详情 · ${escapeHtml(task.title)}">查看详情${icon('arrow')}</button>
       </div>
     </article>`;
@@ -154,13 +179,39 @@ function renderBoard() {
   }
 }
 
+function bindingCard(method) {
+  const config = BINDING_METHODS[method];
+  const time = bindings[person]?.[method];
+  return `<article class="panel binding-card binding-${method}">
+    <div class="binding-top">
+      <span class="binding-icon">${icon(config.glyph)}</span>
+      <div><h3>${config.label}</h3><p>${config.purpose}</p></div>
+      <span class="binding-state ${time ? 'is-bound' : ''}">${time ? config.state : '待绑定'}</span>
+    </div>
+    <div class="binding-bottom">
+      ${time ? `<strong class="binding-value">${bindingDetails(method, person)}</strong>` : ''}
+      <button class="button ${time ? 'secondary' : 'binding-action'}" type="button" data-action="binding" data-value="${method}" aria-label="${time ? `管理${config.label}绑定` : config.action}">${time ? '管理绑定' : config.action}</button>
+    </div>
+  </article>`;
+}
+
+function bindingCards() {
+  return Object.keys(BINDING_METHODS).map(bindingCard).join('');
+}
+
 function renderCredit() {
   const { total, entries } = creditFor(tasks, person);
+  const verified = identityReady(bindings[person]);
+  $('#identity-content').innerHTML = `
+    <div class="identity-section-head"><div><h2 id="identity-title">${PEOPLE[person].name}的身份绑定</h2><p>两项绑定完成后即可发布或接单。</p></div>
+      <span class="binding-state ${verified ? 'is-bound' : ''}">${verified ? '演示身份已验证' : '身份待验证'}</span></div>
+    <div class="binding-grid">${bindingCards()}</div>
+    <p class="identity-note">${icon('info')}<span>Demo 使用预置邮箱和芝麻信用样例，演示验证码在页面内显示。</span></p>`;
   $('#credit-preview').innerHTML = `
-    <div class="credit-heading"><span class="credit-emblem">${icon('shield')}</span><h2 id="credit-preview-title">我的信用</h2></div>
+    <div class="credit-heading"><span class="credit-emblem">${icon('shield')}</span><h2 id="credit-preview-title">我的校内信用</h2></div>
     <div class="credit-number"><strong>${total}</strong><span>分</span></div>
     <p class="credit-caption"><span class="credit-dot"></span>已完成 ${entries.length} 单互助</p>
-    <a class="text-link" href="#credit">查看信用记录${icon('arrow')}</a>`;
+    <a class="text-link" href="#credit">${verified ? '查看身份与信用' : '绑定身份与信用'}${icon('arrow')}</a>`;
   const records = entries.map(task => `
     <li class="record">
       <div class="record-icon">${icon('check')}</div>
@@ -169,13 +220,13 @@ function renderCredit() {
     </li>`).join('');
   $('#credit-content').innerHTML = `
     <section class="panel credit-summary">
-      <div class="credit-heading"><span class="credit-emblem">${icon('shield')}</span><h2>${PEOPLE[person].name}的信用</h2></div>
+      <div class="credit-heading"><span class="credit-emblem">${icon('shield')}</span><h2>${PEOPLE[person].name}的校内信用</h2></div>
       <div class="credit-number"><strong>${total}</strong><span>分</span></div>
       <p class="credit-caption"><span class="credit-dot"></span>已完成 ${entries.length} 单互助</p>
       <p class="summary-rule">每单由发布者确认后，接单同学获得 ${CREDIT_PER_TASK} 分。</p>
     </section>
     <section class="panel credit-records" aria-labelledby="credit-log-title">
-      <h2 id="credit-log-title">信用明细</h2>
+      <h2 id="credit-log-title">校内信用明细</h2>
       <ul class="records">${records}
         <li class="record"><div class="record-icon">${icon('shield')}</div><div class="record-copy"><strong>初始信用分</strong><small>演示身份的起始分值</small></div><strong class="record-amount">+${BASE_CREDIT} 分</strong></li>
       </ul>
@@ -244,7 +295,7 @@ function renderPage(scroll = false) {
     if (link.dataset.page === ui.page) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   }
-  const titles = { tasks: '任务广场', mine: '我的任务', credit: '信用记录' };
+  const titles = { tasks: '任务广场', mine: '我的任务', credit: '身份与信用' };
   document.title = `搭把手 · ${titles[ui.page]}`;
   if (scroll) window.scrollTo(0, 0);
 }
@@ -271,6 +322,12 @@ function showDialog(options) {
 
 function refocusDialog() {
   $('#dialog-title', dialog)?.focus();
+}
+
+function replaceDialog(options) {
+  modal = options;
+  renderDialog();
+  refocusDialog();
 }
 
 function field(label, control, hint = '') {
@@ -364,7 +421,7 @@ function updatePublishFields(input) {
 }
 
 function detailRoles(task) {
-  const party = (id, label) => `<div class="detail-person">${avatar(id)}<div><small>${label}</small><strong>${PEOPLE[id].name}</strong></div><span>${creditFor(tasks, id).total} 信用分</span></div>`;
+  const party = (id, label) => `<div class="detail-person">${avatar(id)}<div><small>${label}</small><strong>${PEOPLE[id].name}${identityTag(id)}</strong></div><span>${creditFor(tasks, id).total} 校内信用分</span></div>`;
   return `<div class="detail-people">${party(task.author, '发布者')}${task.assignee ? party(task.assignee, '接单同学') : ''}</div>`;
 }
 
@@ -403,7 +460,10 @@ function detailActions(task, status) {
   if (modal.stage === 'delivery') {
     return `${secondary('返回详情', 'stay')}<button class="button primary" type="submit" form="delivery-form">提交交付</button>`;
   }
-  if (status === 'open') return own ? secondary('取消任务', 'ask-cancel') : primary('确认接单', 'accept', 'check');
+  if (status === 'open') {
+    if (own) return secondary('取消任务', 'ask-cancel');
+    return identityReady(bindings[person]) ? primary('确认接单', 'accept', 'check') : primary('验证身份后接单', 'gate-accept', 'shield');
+  }
   if (status === 'active' && runner) return secondary('退出接单', 'ask-withdraw') + primary('提交交付', 'delivery');
   if (status === 'review' && own) return primary('确认完成', 'complete', 'check');
   return secondary('关闭', 'close');
@@ -446,7 +506,7 @@ function renderDetail(task) {
 function renderGuide() {
   dialog.innerHTML = `${dialogHeader('互助指南')}
     <div class="dialog-scroll guide-content">
-      <section><h3>发布和接单</h3><p>发布时写清地点、截止时间和交接要求。接单者核对路线，做完后提交交付说明。</p></section>
+      <section><h3>发布和接单</h3><p>在「身份与信用」绑定演示学生邮箱和芝麻信用。发布时写清地点、截止时间和交接要求，接单者做完后提交交付说明。</p></section>
       <section><h3>体验双方确认</h3><p>切换右上角的演示身份。例如用小林接阿周的任务，提交交付后切换成阿周，在「我的任务 → 我发布的」确认完成。小林会获得 ${CREDIT_PER_TASK} 信用分。</p></section>
       <section><h3>座位互助</h3><p>图书馆可以请同学帮看空位，并按校规本人预约。校园活动可在主办方允许时请同学短时留座。</p></section>
       <section><h3>数据与金额</h3><p>校区、同学和示例任务均为演示数据。任务保存在当前浏览器。感谢费和商品预算用于展示，无在线支付或报销。</p></section>
@@ -454,9 +514,67 @@ function renderGuide() {
     <div class="dialog-footer"><button class="button primary" type="button" data-action="close">知道了</button></div>`;
 }
 
+function identityFooter(back, action = '') {
+  return `<div class="dialog-footer"><p class="form-error" role="alert" hidden></p>
+    <button type="button" class="button secondary" data-action="binding-back">${back}</button>${action}</div>`;
+}
+
+function bindingPopup(title, content, back, action = '') {
+  dialog.innerHTML = `${dialogHeader(title)}<div class="dialog-scroll identity-dialog">${content}</div>${identityFooter(back, action)}`;
+}
+
+function renderIdentityDialog() {
+  const { stage, target, challenge, disconnect, notice } = modal;
+  const { name } = PEOPLE[person];
+  if (stage === 'overview') {
+    const publishing = target.type === 'publish';
+    const intent = publishing ? '发布任务' : '接单';
+    const ready = identityReady(bindings[person]);
+    const action = ready || !publishing ? `<button type="button" class="button primary" data-action="resume-task">${publishing ? '继续发布' : '返回任务'}${icon('arrow')}</button>` : '';
+    return bindingPopup(`验证身份后${intent}`, `
+      <p>${ready ? '两项绑定已完成。' : `${name}需验证学生邮箱并授权芝麻信用。`}</p>
+      ${notice ? `<div class="info-box">${icon('info')}${escapeHtml(notice)}</div>` : ''}
+      <div class="binding-grid">${bindingCards()}</div>`, '稍后再说', action);
+  }
+
+  const { label, glyph } = BINDING_METHODS[stage];
+  const boundAt = bindings[person]?.[stage];
+  const back = target ? '返回绑定' : '关闭';
+  if (boundAt) {
+    const action = disconnect
+      ? '<button type="button" class="button danger" data-action="disconnect">确认解除绑定</button>'
+      : '<button type="button" class="button secondary" data-action="ask-disconnect">解除绑定</button>';
+    return bindingPopup(`管理${label}绑定`, `
+      <div class="binding-receipt"><span class="binding-icon">${icon(glyph)}</span>
+        <div><strong>${bindingDetails(stage, person)}</strong><p>${clockLabel(boundAt)} · 演示绑定</p></div></div>
+      ${disconnect ? `<div class="info-box">${icon('info')}<span>解除后需要重新完成绑定才能发布或接单。已接任务仍可交付。</span></div>` : ''}`, back, action);
+  }
+
+  if (stage === 'sesame') {
+    return bindingPopup('芝麻信用授权', `
+      <div class="binding-receipt binding-sesame"><span class="binding-icon">${icon(glyph)}</span>
+        <div><strong>${name} · 演示授权</strong><p>授权后在自己的信用页面查看预置芝麻分。</p></div></div>
+      <form id="sesame-form"><label class="check-field"><input type="checkbox" name="consent" required>
+        <span>同意为当前身份记录模拟芝麻信用授权。</span></label></form>`, target ? back : '取消',
+      '<button type="submit" form="sesame-form" class="button primary">确认模拟授权</button>');
+  }
+
+  const mailbox = demoMailbox(person);
+  return bindingPopup('绑定学生邮箱', `
+    <form id="student-form" class="binding-form">
+      ${field('学生邮箱', `<input type="email" name="mailbox" maxlength="254" autocomplete="off" autocapitalize="none" spellcheck="false"
+        placeholder="${mailbox}" ${challenge ? `value="${mailbox}" readonly` : 'required'}>`)}
+      ${challenge ? `<div class="demo-mail"><div><strong>演示邮件</strong><p>验证码 10 分钟内有效</p></div><output class="challenge-code">${challenge.code}</output></div>
+        ${field('六位验证码', '<input name="code" inputmode="numeric" autocomplete="off" pattern="[0-9]{6}" maxlength="6" required>')}
+        <button class="plain-button" type="button" data-action="new-code">获取新验证码</button>`
+        : '<button class="plain-button" type="button" data-action="sample-email">填入演示邮箱</button>'}
+    </form>`, target ? back : '取消', `<button type="submit" form="student-form" class="button primary">${challenge ? '验证并绑定' : '获取演示验证码'}</button>`);
+}
+
 function renderDialog() {
   if (modal.type === 'publish') return renderPublish();
   if (modal.type === 'guide') return renderGuide();
+  if (modal.type === 'identity') return renderIdentityDialog();
   const task = tasks.find(task => task.id === modal.id);
   if (task) renderDetail(task);
 }
@@ -468,23 +586,86 @@ function showFormError(message) {
   error.hidden = false;
 }
 
-async function mutate(update, onSuccess) {
+async function mutate(commit, onSuccess) {
   if (saving) return;
   saving = true;
   dialog.setAttribute('aria-busy', 'true');
-  const commit = () => setTasks(update(restoreTasks()));
   try {
     const persisted = navigator.locks ? await navigator.locks.request(TASKS_KEY, commit) : commit();
     renderData();
-    onSuccess(persisted ? '' : '当前浏览器无法保存，刷新后将恢复示例数据。');
+    onSuccess(persisted ? '' : '当前浏览器无法保存本次操作。');
   } catch (error) {
     tasks = restoreTasks();
+    bindings = restoreBindings();
     renderData();
     if (modal?.type === 'detail') renderDialog();
     showFormError(error.message);
   } finally {
     saving = false;
     dialog.removeAttribute('aria-busy');
+  }
+}
+
+function mutateTasks(update, onSuccess) {
+  return mutate(() => setTasks(update(restoreTasks())), onSuccess);
+}
+
+function requireVerifiedIdentity() {
+  bindings = restoreBindings();
+  if (!identityReady(bindings[person])) throw new Error('请完成学生邮箱和芝麻信用绑定。');
+}
+
+function openBinding(stage, target = modal?.target) {
+  const next = { type: 'identity', stage, target };
+  if (dialog.open) replaceDialog(next);
+  else showDialog(next);
+}
+
+function startPublish() {
+  const target = { type: 'publish', category: 'pickup', drafts: {} };
+  bindings = restoreBindings();
+  if (identityReady(bindings[person])) showDialog(target);
+  else openBinding('overview', target);
+}
+
+function resumeTask() {
+  const { target } = modal;
+  bindings = restoreBindings();
+  if (target.type === 'publish' && !identityReady(bindings[person])) return renderDialog();
+  replaceDialog(target);
+}
+
+function changeBinding(method, linked, code = '') {
+  const { challenge, target } = modal;
+  return mutate(() => {
+    const current = restoreBindings();
+    const record = { ...current[person] };
+    if (linked) {
+      // The demo challenge is held in the dialog and never persisted.
+      if (method === 'student') verifyDemoCode(challenge, person, code);
+      record[method] ??= Date.now();
+    } else {
+      delete record[method];
+    }
+    bindings = { ...current, [person]: record };
+    return persist(BINDINGS_KEY, bindings);
+  }, partial => {
+    if (target) {
+      replaceDialog({ type: 'identity', stage: 'overview', target, notice: partial });
+    } else {
+      dialog.close();
+      showToast(partial || (linked ? `${BINDING_METHODS[method].label}已绑定` : '已解除绑定'));
+    }
+  });
+}
+
+function requestBindingCode(address) {
+  try {
+    modal.challenge = requestDemoCode(person, address);
+    renderDialog();
+    $('#student-form input[name="code"]').focus();
+  } catch (error) {
+    showFormError(error.message);
   }
 }
 
@@ -495,7 +676,8 @@ function updateTask(action, delivery = '') {
     complete: `已确认完成，${CREDIT_PER_TASK} 分已计入接单同学的信用记录。`,
     cancel: '任务已取消。', withdraw: '已退出接单。',
   };
-  return mutate(current => {
+  return mutateTasks(current => {
+    if (action === 'accept') requireVerifiedIdentity();
     const target = current.find(task => task.id === id);
     if (!target) throw new Error('找不到这项任务，请返回任务列表。');
     const updated = transition(target, action, person, delivery);
@@ -525,7 +707,7 @@ function selectPerson(id) {
 
 const actions = {
   guide: () => showDialog({ type: 'guide' }),
-  publish: () => showDialog({ type: 'publish', category: 'pickup', drafts: {} }),
+  publish: startPublish,
   detail: button => showDialog({ type: 'detail', id: button.dataset.id }),
   close: () => dialog.close(),
   filter: button => { ui.category = button.dataset.value; renderBoard(); },
@@ -534,6 +716,21 @@ const actions = {
   'clear-mine': () => { ui.myStatus = 'all'; $('#mine-status').value = 'all'; renderMine(); $('#mine-status').focus(); },
   'go-board': () => { location.hash = '#tasks'; },
   person: button => selectPerson(button.dataset.value),
+  binding: button => openBinding(button.dataset.value),
+  'binding-back': () => {
+    if (modal.stage !== 'overview' && modal.target) openBinding('overview');
+    else dialog.close();
+  },
+  'gate-accept': () => openBinding('overview', { type: 'detail', id: modal.id }),
+  'resume-task': resumeTask,
+  'sample-email': () => {
+    const input = $('#student-form input[name="mailbox"]');
+    input.value = demoMailbox(person);
+    input.focus();
+  },
+  'new-code': () => requestBindingCode(demoMailbox(person)),
+  'ask-disconnect': () => replaceDialog({ ...modal, disconnect: true }),
+  disconnect: () => changeBinding(modal.stage, false),
   accept: () => updateTask('accept'),
   complete: () => updateTask('complete'),
   cancel: () => updateTask('cancel'),
@@ -561,17 +758,29 @@ document.addEventListener('click', event => {
 
 document.addEventListener('submit', event => {
   const form = event.target;
-  if (form.id !== 'publish-form' && form.id !== 'delivery-form') return;
+  if (!['publish-form', 'delivery-form', 'student-form', 'sesame-form'].includes(form.id)) return;
   event.preventDefault();
   if (saving) return;
   const values = Object.fromEntries(new FormData(form));
+  if (form.id === 'student-form') {
+    if (modal.challenge) changeBinding('student', true, values.code);
+    else requestBindingCode(values.mailbox);
+    return;
+  }
+  if (form.id === 'sesame-form') {
+    if (values.consent === 'on') changeBinding('sesame', true);
+    return;
+  }
   if (form.id === 'delivery-form') {
     if (!values.delivery.trim()) { showFormError('请填写交付说明。'); return; }
     updateTask('submit', values.delivery);
     return;
   }
   const id = globalThis.crypto.randomUUID?.() ?? Array.from(crypto.getRandomValues(new Uint32Array(4))).join('-');
-  mutate(current => [createTask(values, person, id), ...current], partial => {
+  mutateTasks(current => {
+    requireVerifiedIdentity();
+    return [createTask(values, person, id), ...current];
+  }, partial => {
     ui.category = 'all';
     ui.query = '';
     search.value = '';
@@ -603,8 +812,9 @@ dialog.addEventListener('cancel', event => {
 });
 dialog.addEventListener('close', () => {
   if (opener && !opener.isConnected) {
-    const replacement = [...document.querySelectorAll('button[data-action="detail"]')]
-      .find(button => button.dataset.id === opener.dataset.id && button.offsetParent !== null);
+    const replacement = [...document.querySelectorAll('button[data-action="detail"], #identity-content button')]
+      .find(button => button.dataset.action === opener.dataset.action && button.dataset.id === opener.dataset.id &&
+        button.dataset.value === opener.dataset.value && button.offsetParent !== null);
     (replacement ?? $('#main-content')).focus({ preventScroll: true });
   }
   modal = undefined;
@@ -620,9 +830,13 @@ $('#task-sort').addEventListener('change', event => { ui.sort = event.target.val
 $('#mine-status').addEventListener('change', event => { ui.myStatus = event.target.value; renderMine(); });
 window.addEventListener('hashchange', () => renderPage(true));
 window.addEventListener('storage', event => {
-  if (event.key !== TASKS_KEY) return;
-  tasks = restoreTasks();
+  if (event.key === TASKS_KEY) tasks = restoreTasks();
+  else if (event.key === BINDINGS_KEY) bindings = restoreBindings();
+  else return;
   renderData();
+  if (event.key === BINDINGS_KEY && dialog.open && (modal.stage === 'overview' || (modal.type === 'detail' && !modal.stage))) {
+    renderDialog();
+  }
 });
 window.setInterval(() => {
   if (document.activeElement?.closest('.task-card')) return;
@@ -632,6 +846,7 @@ window.setInterval(() => {
 
 for (const element of document.querySelectorAll('[data-icon]')) element.innerHTML = icon(element.dataset.icon);
 setTasks(restoreTasks());
+bindings = restoreBindings();
 person = readPerson();
 renderAccount();
 renderData();
