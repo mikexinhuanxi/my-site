@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#f7f8fc">
   <meta name="description" content="搭把手是一个校园跑腿互助演示，支持发布代取、代买和座位互助任务，体验同学之间的交接和信用积累。">
   <title>搭把手 · 校园跑腿互助</title>
-  <link rel="stylesheet" href="./styles.css?v=3">
-  <script type="module" src="./app.js?v=3"></script>
+  <link rel="stylesheet" href="./styles.css?v=4">
+  <script type="module" src="./app.js?v=4"></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">跳至内容</a>
@@ -59,9 +59,27 @@
                 <div><h2 id="board-title">任务广场</h2><p id="board-count" aria-live="polite"></p></div>
                 <label class="search-field"><span data-icon="search"></span><span class="visually-hidden">搜索任务或地点</span><input id="task-search" type="search" maxlength="80" placeholder="搜索任务或地点" autocomplete="off"></label>
               </div>
+              <section class="route-finder" id="route-finder" aria-labelledby="route-title">
+                <div class="route-head">
+                  <h3 id="route-title"><span data-icon="route"></span>顺路找任务</h3>
+                  <button type="button" class="plain-button route-example-button" data-action="example-route">试用示例路线</button>
+                </div>
+                <form id="route-form" class="route-form">
+                  <label class="route-field"><span>起点</span><select id="route-from" name="from" required><option value="">选择起点</option></select><span class="route-chevron" data-icon="chevron"></span></label>
+                  <span class="route-arrow" data-icon="arrow"></span>
+                  <label class="route-field"><span>终点</span><select id="route-to" name="to" required><option value="">选择终点</option></select><span class="route-chevron" data-icon="chevron"></span></label>
+                  <button type="submit" class="button route-submit">查找顺路任务</button>
+                </form>
+                <p class="route-hint" id="route-hint"></p>
+                <p class="form-error route-error" id="route-error" role="alert" hidden></p>
+                <div class="route-current" id="route-current" hidden>
+                  <p id="route-label" aria-live="polite"></p>
+                  <button type="button" class="plain-button" data-action="clear-route">清除路线</button>
+                </div>
+              </section>
               <div class="board-controls">
                 <div class="filter-list" id="category-filters" role="group" aria-label="任务类别"></div>
-                <label class="sort-field"><span class="visually-hidden">任务排序</span><select id="task-sort"><option value="latest">最新发布</option><option value="soon">最早截止</option><option value="reward">感谢费最高</option></select><span data-icon="chevron"></span></label>
+                <label class="sort-field"><span class="visually-hidden">任务排序</span><select id="task-sort"><option value="latest">最新发布</option><option value="soon">最早截止</option><option value="reward">感谢费最高</option><option id="route-sort" value="route" hidden disabled>最顺路</option></select><span data-icon="chevron"></span></label>
               </div>
               <div class="task-grid" id="board-tasks"></div>
             </section>

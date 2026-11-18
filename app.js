@@ -7,6 +7,7 @@ import { icon } from './icons.js?v=2';
 import {
   bindingDetails, demoMailbox, normalizeBindings, requestDemoCode, studentVerified, updateBinding, verifyDemoCode,
 } from './identity.js?v=3';
+import { CAMPUS_STOPS, EXAMPLE_ROUTE, MAX_DETOUR_METERS, selectRoute, taskDetour } from './routes.js?v=4';
 
 const TASKS_KEY = 'dabashou.tasks.v1';
 const BINDINGS_KEY = 'dabashou.bindings.v1';
@@ -21,11 +22,13 @@ const dialog = $('#dialog');
 const accountButton = $('#account-button');
 const accountPanel = $('#account-panel');
 const search = $('#task-search');
+const routeForm = $('#route-form');
 const toast = $('#toast');
 const currency = new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'CNY', currencyDisplay: 'narrowSymbol' });
 
-const ui = { page: 'tasks', category: 'all', query: '', sort: 'latest', myRole: 'taken', myStatus: 'all' };
+const ui = { page: 'tasks', category: 'all', query: '', sort: 'latest', route: null, myRole: 'taken', myStatus: 'all' };
 let tasks = seedTasks();
+const routeExamples = tasks.filter(task => task.status === 'open');
 let bindings = {};
 let person = 'lin';
 let modal;
@@ -113,20 +116,27 @@ function identityTag(id) {
   return `<span class="identity-mark" title="学生邮箱已验证（演示）">${icon('shield')}<span class="visually-hidden">学生邮箱已验证</span></span>`;
 }
 
-function renderCard(task, surface) {
+function taskPath(task) {
+  return escapeHtml(task.origin) + (task.destination ? ` ${icon('arrow')} ${escapeHtml(task.destination)}` : '');
+}
+
+function detourTag(extra) {
+  if (extra === null) return '';
+  return `<span class="route-fit">${extra === 0 ? '沿途' : `多走 ${extra} 米`}</span>`;
+}
+
+function renderCard(task, surface, extra = null) {
   const status = taskStatus(task);
   const isAuthor = task.author === person;
   const upcoming = surface === 'board' && task.dueAt - Date.now() < 90 * MINUTE;
   const counterpart = isAuthor ? task.assignee ?? task.author : task.author;
   const peerName = isAuthor && !task.assignee ? '我发布的' : PEOPLE[counterpart].name;
-  const path = escapeHtml(task.origin) +
-    (task.destination ? ` ${icon('arrow')} ${escapeHtml(task.destination)}` : '');
   return `
     <article class="task-card">
       <div class="task-card-top">${categoryMark(task.category)}${fee(task.reward)}</div>
       <h3>${escapeHtml(task.title)}</h3>
       <div class="task-meta">
-        <div class="meta-row">${icon('pin')}<span class="route-text">${path}</span></div>
+        <div class="meta-row">${icon('pin')}<span class="route-text">${taskPath(task)}</span>${detourTag(extra)}</div>
         <div class="meta-row">${icon('clock')}<time datetime="${new Date(task.dueAt).toISOString()}">${deadlineLabel(task.dueAt)}</time>
           ${upcoming ? '<span class="urgency">即将截止</span>' : ''}${surface === 'mine' ? statusTag(status) : ''}
         </div>
@@ -147,22 +157,42 @@ function emptyState(heading, description, action, label) {
     <button class="button secondary" type="button" data-action="${action}">${label}</button></div>`;
 }
 
+function routeCandidates(list, route) {
+  return list.map(task => ({ task, extra: route ? taskDetour(route, task) : null }))
+    .filter(({ extra }) => !route || extra !== null);
+}
+
+function renderRouteExamples(rows) {
+  return `<section class="panel route-examples" aria-labelledby="route-examples-title">
+    <h3 id="route-examples-title">示例匹配结果</h3>
+    <p>当前路线没有待接任务，可通过以下样例查看筛选效果。</p>
+    <ul>${rows.map(({ task, extra }) => `
+      <li><div><strong>${escapeHtml(task.title)}</strong><small class="route-text">${taskPath(task)}</small></div>${detourTag(extra)}</li>`).join('')}</ul>
+  </section>`;
+}
+
 function renderBoard() {
   const open = tasks.filter(task => taskStatus(task) === 'open');
+  const pending = routeCandidates(open, ui.route);
+  const examples = ui.route?.showExamples && pending.length === 0;
+  const candidates = examples ? routeCandidates(routeExamples, ui.route) : pending;
   const query = ui.query.trim().toLocaleLowerCase('zh-CN');
-  const visible = open.filter(task => {
+  const visible = candidates.filter(({ task }) => {
     const categoryMatch = ui.category === 'all' || task.category === ui.category;
     const publicText = [task.title, task.origin, task.destination, task.item, task.notes, CATEGORIES[task.category].label].join(' ');
     return categoryMatch && publicText.toLocaleLowerCase('zh-CN').includes(query);
   });
   const sorts = {
-    latest: (a, b) => b.createdAt - a.createdAt,
-    soon: (a, b) => a.dueAt - b.dueAt,
-    reward: (a, b) => b.reward - a.reward || a.dueAt - b.dueAt,
+    latest: (a, b) => b.task.createdAt - a.task.createdAt,
+    soon: (a, b) => a.task.dueAt - b.task.dueAt,
+    reward: (a, b) => b.task.reward - a.task.reward || a.task.dueAt - b.task.dueAt,
+    route: (a, b) => a.extra - b.extra || a.task.dueAt - b.task.dueAt,
   };
   visible.sort(sorts[ui.sort]);
-  $('#board-count').textContent = ui.category === 'all' && !query
-    ? `${open.length} 个待接单任务` : `找到 ${visible.length} 个任务`;
+  let count = `找到 ${visible.length} 个任务`;
+  if (ui.route) count = `找到 ${visible.length} 个顺路${examples ? '示例' : '任务'}`;
+  else if (ui.category === 'all' && !query) count = `${open.length} 个待接单任务`;
+  $('#board-count').textContent = count;
   const filters = $('#category-filters');
   if (!filters.childElementCount) {
     filters.innerHTML = [['all', '全部任务'], ...Object.entries(CATEGORIES).map(([key, entry]) => [key, entry.label])]
@@ -173,12 +203,50 @@ function renderBoard() {
   }
   const destination = $('#board-tasks');
   if (visible.length) {
-    destination.innerHTML = visible.map(task => renderCard(task, 'board')).join('');
-  } else if (open.length && (ui.category !== 'all' || query)) {
+    destination.innerHTML = examples ? renderRouteExamples(visible) : visible.map(({ task, extra }) => renderCard(task, 'board', extra)).join('');
+  } else if (candidates.length) {
     destination.innerHTML = emptyState('没有匹配的任务', '试试换个关键词，或查看全部类别。', 'clear', '清除筛选');
+  } else if (ui.route) {
+    destination.innerHTML = emptyState('这条路线暂无顺路任务', '换个起点或终点，或者试用示例路线。', 'clear-route', '清除路线');
   } else {
     destination.innerHTML = emptyState('暂时没有待接任务', '有需要时，可以发一个任务请同学帮忙。', 'publish', '发布任务');
   }
+}
+
+function resetTaskSearch() {
+  ui.category = 'all';
+  ui.query = '';
+  search.value = '';
+}
+
+function renderRouteState() {
+  const route = ui.route;
+  const routeSort = $('#route-sort');
+  routeSort.hidden = routeSort.disabled = !route;
+  $('#task-sort').value = ui.sort;
+  $('#route-hint').hidden = Boolean(route);
+  $('#route-current').hidden = !route;
+  if (route) {
+    $('#route-label').textContent = `${CAMPUS_STOPS[route.from]} → ${CAMPUS_STOPS[route.to]} · 直达约 ${route.meters} 米`;
+  }
+}
+
+function applyRoute(from, to, showExamples = false) {
+  ui.route = { ...selectRoute(from, to), showExamples };
+  ui.sort = 'route';
+  routeForm.elements.from.value = from;
+  routeForm.elements.to.value = to;
+  $('#route-error').hidden = true;
+  renderRouteState();
+  renderBoard();
+}
+
+function resetRoute() {
+  ui.route = null;
+  if (ui.sort === 'route') ui.sort = 'latest';
+  routeForm.reset();
+  $('#route-error').hidden = true;
+  renderRouteState();
 }
 
 function bindingCard(method) {
@@ -730,7 +798,16 @@ const actions = {
   detail: button => showDialog({ type: 'detail', id: button.dataset.id }),
   close: () => dialog.close(),
   filter: button => { ui.category = button.dataset.value; renderBoard(); },
-  clear: () => { ui.category = 'all'; ui.query = ''; search.value = ''; renderBoard(); search.focus(); },
+  clear: () => { resetTaskSearch(); renderBoard(); search.focus(); },
+  'example-route': () => {
+    resetTaskSearch();
+    applyRoute(EXAMPLE_ROUTE.from, EXAMPLE_ROUTE.to, true);
+  },
+  'clear-route': () => {
+    resetRoute();
+    renderBoard();
+    routeForm.elements.from.focus();
+  },
   'my-role': button => { ui.myRole = button.dataset.value; renderMine(); },
   'clear-mine': () => { ui.myStatus = 'all'; $('#mine-status').value = 'all'; renderMine(); $('#mine-status').focus(); },
   'go-board': () => { location.hash = '#tasks'; },
@@ -800,11 +877,9 @@ document.addEventListener('submit', event => {
     requireVerifiedIdentity();
     return [createTask(values, person, id), ...current];
   }, partial => {
-    ui.category = 'all';
-    ui.query = '';
-    search.value = '';
+    resetTaskSearch();
     ui.sort = 'latest';
-    $('#task-sort').value = 'latest';
+    resetRoute();
     renderBoard();
     dialog.close();
     location.hash = '#tasks';
@@ -845,6 +920,17 @@ $('.skip-link').addEventListener('click', event => {
 });
 
 search.addEventListener('input', () => { ui.query = search.value; renderBoard(); });
+routeForm.addEventListener('submit', event => {
+  event.preventDefault();
+  const { from, to } = Object.fromEntries(new FormData(routeForm));
+  try {
+    applyRoute(from, to);
+  } catch (error) {
+    $('#route-error').textContent = error.message;
+    $('#route-error').hidden = false;
+  }
+});
+routeForm.addEventListener('change', () => { $('#route-error').hidden = true; });
 $('#task-sort').addEventListener('change', event => { ui.sort = event.target.value; renderBoard(); });
 $('#mine-status').addEventListener('change', event => { ui.myStatus = event.target.value; renderMine(); });
 window.addEventListener('hashchange', () => renderPage(true));
@@ -864,9 +950,14 @@ window.setInterval(() => {
 }, MINUTE);
 
 for (const element of document.querySelectorAll('[data-icon]')) element.innerHTML = icon(element.dataset.icon);
+for (const menu of routeForm.querySelectorAll('select')) {
+  menu.append(...Object.entries(CAMPUS_STOPS).map(([id, label]) => new Option(label, id)));
+}
+$('#route-hint').textContent = `按演示校区步行路线筛选，最多绕行 ${MAX_DETOUR_METERS} 米。`;
 setTasks(restoreTasks());
 bindings = restoreBindings();
 person = readPerson();
 renderAccount();
+renderRouteState();
 renderData();
 renderPage();

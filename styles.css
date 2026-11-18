@@ -146,6 +146,26 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .search-field input { width: 100%; min-height: 35px; padding: 0; border: 0; background: transparent; color: var(--ink); font-size: 13px; }
 .search-field input::placeholder { color: var(--muted); }
 .search-field input:focus-visible { outline: 0; }
+.route-finder { margin-bottom: 14px; padding: 11px 13px; border: 1px solid #eae4f9; border-radius: 14px; background: #fbf9ff; }
+.route-head, .route-current { display: flex; justify-content: space-between; align-items: center; gap: 9px; }
+.route-head { margin-bottom: 8px; }
+.route-head h3 { display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 760; }
+.route-head h3 [data-icon] { width: 28px; height: 28px; border-radius: 8px; color: var(--purple-dark); background: #ede6ff; }
+.route-head svg { width: 17px; height: 17px; }
+.route-form { display: grid; grid-template-columns: minmax(0, 1fr) 14px minmax(0, 1fr) auto; gap: 7px; align-items: center; }
+.route-field { position: relative; display: flex; align-items: center; min-width: 0; padding-left: 8px; border: 1px solid #e5e0f2; border-radius: 8px; background: white; }
+.route-field > span:first-child { flex: none; padding-right: 7px; border-right: 1px solid #eee9f8; color: var(--muted); font-size: 11px; }
+.route-field select { flex: 1; width: 100%; min-height: 36px; appearance: none; padding: 0 23px 0 7px; border: 0; border-radius: 8px; background: transparent; font-size: 12px; text-overflow: ellipsis; }
+.route-field select:invalid { color: var(--muted); }
+.route-chevron { position: absolute; right: 7px; pointer-events: none; color: var(--soft); }
+.route-chevron svg, .route-arrow svg { width: 14px; height: 14px; }
+.route-arrow { color: var(--purple-dark); }
+.route-submit { min-height: 38px; padding-inline: 10px; border-radius: 8px; color: var(--purple-dark); background: #ede6ff; font-size: 12px; }
+.route-submit:hover { background: #e3d8ff; }
+.route-hint, .route-current, .route-error { margin-top: 6px; font-size: 12px; }
+.route-hint { color: var(--muted); }
+.route-current p { min-width: 0; color: #54477a; font-weight: 650; overflow-wrap: anywhere; }
+.route-current button, .route-example-button { flex: none; white-space: nowrap; }
 .board-controls, .mine-controls { display: flex; justify-content: space-between; align-items: center; gap: 9px; margin-bottom: 15px; }
 .filter-list { display: flex; flex-wrap: wrap; gap: 7px; }
 .filter-chip { display: inline-flex; align-items: center; justify-content: center; min-height: 37px; padding: 0 12px; border: 1px solid #e5e7f0; border-radius: 9px; background: var(--paper); color: #535b74; font-size: 13px; font-weight: 650; white-space: nowrap; }
@@ -177,6 +197,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .meta-row > svg { width: 14px; height: 14px; margin-top: 2px; color: #777e9a; }
 .route-text { min-width: 0; overflow-wrap: anywhere; }
 .route-text svg { display: inline-block; vertical-align: -.22em; width: 13px; height: 13px; margin: 0 1px; color: #8b80b5; }
+.route-fit { flex: none; padding: 0 5px; border-radius: 5px; color: #216548; background: #e7f6ee; font-size: 11px; line-height: 18px; font-weight: 700; white-space: nowrap; }
 .meta-row time { flex: 0 1 auto; }
 .task-card-bottom { min-height: 46px; margin-top: auto; padding-top: 10px; border-top: 1px solid #eff0f6; }
 .card-person { display: flex; align-items: center; gap: 7px; color: #545d76; font-size: 12px; font-weight: 650; }
@@ -255,6 +276,12 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .empty-state p { font-size: 13px; }
 .empty-state .button { margin-top: 4px; }
 .empty-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 11px; color: #6a53c8; background: #eee8ff; }
+.route-examples { grid-column: 1 / -1; padding: 15px; }
+.route-examples h3 { font-size: 15px; }
+.route-examples p, .route-examples small { margin-top: 3px; color: var(--muted); font-size: 12px; }
+.route-examples ul { margin: 8px 0 0; padding: 0; list-style: none; }
+.route-examples li { display: flex; gap: 8px; justify-content: space-between; align-items: center; padding: 7px 0; border-top: 1px solid #eff0f6; }
+.route-examples small { display: block; }
 
 .identity-content { margin-bottom: 21px; }
 .identity-section-head { display: flex; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 11px; }
@@ -408,6 +435,9 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   .section-head { margin-bottom: 11px; }
   .section-head h2 { font-size: 21px; }
   .search-field { width: min(51%, 210px); min-height: 38px; }
+  .route-finder { padding-inline: 10px; margin-bottom: 11px; }
+  .route-form { grid-template-columns: minmax(0, 1fr) 14px minmax(0, 1fr); }
+  .route-submit { grid-column: 1 / -1; }
   .board-controls { flex-wrap: wrap; justify-content: space-between; margin-bottom: 10px; }
   .filter-list { gap: 4px; }
   .filter-chip { padding: 0 6px; font-size: 12px; min-height: 36px; }
